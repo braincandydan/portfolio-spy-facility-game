@@ -1,0 +1,102 @@
+// Xeno containment: procedural grey alien in a glass cell, idle animation,
+// and the dialogue it delivers before opening the comms panel.
+
+export const ALIEN_SPEAKER = 'SUBJECT J-RÖD — CELL 04';
+
+export const ALIEN_DIALOGUE = [
+  'You are not the first to walk in here wearing a visitor badge. You are the first to stop.',
+  'They keep me for the propulsion program. Element 115. Gravity wave amplification. The saucer in Hangar-1 — my ride home, technically.',
+  'I have watched your species\u2019 work through this glass. The operative whose file you carry... their projects are genuinely impressive. For a bipedal carbon unit.',
+  'You want to make contact? Good instinct. Communication is the only technology your kind actually mastered.',
+  'Here — I will open the secure channels for you. Tell them J-Röd sent you. They will not believe you, which is ideal.',
+];
+
+/**
+ * Builds the containment cell + alien in the south wing.
+ * Returns { group, animate(dt, t) }.
+ */
+export function buildContainment(THREE, scene, position = { x: 0, z: 32 }) {
+  const group = new THREE.Group();
+  group.position.set(position.x, 0, position.z);
+
+  const mat = (c) => new THREE.MeshLambertMaterial({ color: c, flatShading: true });
+
+  // Cell base + top ring
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.5, 0.4, 12), mat(0x2b3138));
+  base.position.y = 0.2;
+  group.add(base);
+
+  const topRing = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.2, 0.3, 12), mat(0x2b3138));
+  topRing.position.y = 4.4;
+  group.add(topRing);
+
+  // Glass cylinder
+  const glass = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.1, 2.1, 3.9, 16, 1, true),
+    new THREE.MeshLambertMaterial({
+      color: 0x7fd4c0, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false,
+    }),
+  );
+  glass.position.y = 2.4;
+  group.add(glass);
+
+  // Cell light
+  const cellLight = new THREE.PointLight(0x9fe8d8, 8, 12, 1.8);
+  cellLight.position.y = 3.6;
+  group.add(cellLight);
+
+  // ---- the alien (classic grey) ----
+  const alien = new THREE.Group();
+  const skin = new THREE.MeshLambertMaterial({ color: 0x9aa89a, flatShading: true });
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), skin);
+  head.scale.set(1, 1.25, 0.95);
+  head.position.y = 2.15;
+  alien.add(head);
+
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x0a0d10 });
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), eyeMat);
+    eye.scale.set(1.25, 0.7, 0.5);
+    eye.position.set(s * 0.2, 2.16, 0.34);
+    eye.rotation.z = s * -0.45;
+    alien.add(eye);
+  }
+
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.35, 6), skin);
+  neck.position.y = 1.72;
+  alien.add(neck);
+
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.16, 0.85, 8), skin);
+  torso.position.y = 1.18;
+  alien.add(torso);
+
+  for (const s of [-1, 1]) {
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.85, 5), skin);
+    arm.position.set(s * 0.3, 1.15, 0);
+    arm.rotation.z = s * 0.25;
+    alien.add(arm);
+
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.8, 5), skin);
+    leg.position.set(s * 0.11, 0.4, 0);
+    alien.add(leg);
+  }
+
+  alien.position.y = 0.4;
+  group.add(alien);
+
+  scene.add(group);
+
+  return {
+    group,
+    alien,
+    animate(dt, t) {
+      // Weightless idle: slow bob + gentle sway, head tracks nothing in particular
+      alien.position.y = 0.4 + Math.sin(t / 900) * 0.12;
+      alien.rotation.y = Math.sin(t / 2400) * 0.35;
+      head.rotation.x = Math.sin(t / 1700) * 0.08;
+      cellLight.intensity = 8 + Math.sin(t / 500) * 1.2;
+      glass.material.opacity = 0.16 + Math.sin(t / 700) * 0.03;
+    },
+  };
+}

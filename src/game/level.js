@@ -1,5 +1,12 @@
-// Builds the facility geometry into a Three.js scene. Pure function of (THREE, scene) —
-// no engine state lives here, so level layout can be edited without touching Game.js.
+// Builds the facility geometry into a Three.js scene. Doors/windows, canvas
+// textures (tile wainscot, concrete, floor tiles), and room props.
+// Pure function of (THREE, scene, assets?) — no engine state lives here.
+
+import { buildDoors, DOOR_DEFS } from './doors.js';
+import { buildContainment } from './alien.js';
+import {
+  buildSaucer, buildE115Crates, buildVaultArchives, buildSigintScreens, buildHazardStrips,
+} from './s4props.js';
 
 export function makeLabelTexture(THREE, text, fg) {
   const c = document.createElement('canvas');
@@ -22,48 +29,245 @@ export function makeLabelTexture(THREE, text, fg) {
   return tex;
 }
 
-export function buildLevel(THREE, scene) {
-  const mat = (c) => new THREE.MeshLambertMaterial({ color: c, flatShading: true });
+function canvasTex(THREE, draw, size = 64) {
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  draw(c.getContext('2d'), size);
+  const tex = new THREE.CanvasTexture(c);
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
 
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), mat(0x1a1d21));
+function makeFloorTex(THREE) {
+  return canvasTex(THREE, (ctx, s) => {
+    ctx.fillStyle = '#1a1d21';
+    ctx.fillRect(0, 0, s, s);
+    ctx.strokeStyle = '#2a2e34';
+    ctx.lineWidth = 2;
+    const cell = s / 4;
+    for (let i = 0; i <= 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * cell, 0); ctx.lineTo(i * cell, s);
+      ctx.moveTo(0, i * cell); ctx.lineTo(s, i * cell);
+      ctx.stroke();
+    }
+    // Subtle tile tint variation
+    for (let y = 0; y < 4; y++) {
+      for (let x = 0; x < 4; x++) {
+        if ((x + y) % 2 === 0) {
+          ctx.fillStyle = 'rgba(255,255,255,0.03)';
+          ctx.fillRect(x * cell + 1, y * cell + 1, cell - 2, cell - 2);
+        }
+      }
+    }
+  }, 64);
+}
+
+function makeTileWainscot(THREE) {
+  return canvasTex(THREE, (ctx, s) => {
+    ctx.fillStyle = '#d8dce2';
+    ctx.fillRect(0, 0, s, s);
+    ctx.strokeStyle = '#9aa0a8';
+    ctx.lineWidth = 2;
+    const cell = s / 4;
+    for (let i = 0; i <= 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * cell, 0); ctx.lineTo(i * cell, s);
+      ctx.moveTo(0, i * cell); ctx.lineTo(s, i * cell);
+      ctx.stroke();
+    }
+  }, 64);
+}
+
+function makeConcrete(THREE) {
+  return canvasTex(THREE, (ctx, s) => {
+    ctx.fillStyle = '#30343b';
+    ctx.fillRect(0, 0, s, s);
+    for (let i = 0; i < 80; i++) {
+      const g = 40 + Math.floor(Math.random() * 30);
+      ctx.fillStyle = `rgb(${g},${g + 2},${g + 4})`;
+      ctx.fillRect(Math.random() * s, Math.random() * s, 2 + Math.random() * 3, 2 + Math.random() * 3);
+    }
+  }, 64);
+}
+
+export function buildLevel(THREE, scene, assets = null) {
+  const floorTex = makeFloorTex(THREE);
+  floorTex.repeat.set(35, 35);
+  const tileTex = makeTileWainscot(THREE);
+  tileTex.repeat.set(2, 1);
+  const concreteTex = makeConcrete(THREE);
+  concreteTex.repeat.set(2, 1);
+
+  const floorMat = new THREE.MeshLambertMaterial({ map: floorTex });
+  const upperMat = new THREE.MeshLambertMaterial({ map: concreteTex, flatShading: true });
+  const lowerMat = new THREE.MeshLambertMaterial({ map: tileTex, flatShading: true });
+  const upperMat2 = new THREE.MeshLambertMaterial({
+    map: concreteTex.clone(),
+    flatShading: true,
+    color: 0xb0b4ba,
+  });
+  upperMat2.map.repeat.set(2, 1);
+  const glassMat = new THREE.MeshLambertMaterial({
+    color: 0x88aacc,
+    transparent: true,
+    opacity: 0.28,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const frameMat = new THREE.MeshLambertMaterial({ color: 0x2a2e34, flatShading: true });
+  const metalMat = new THREE.MeshLambertMaterial({ color: 0x4a5560, flatShading: true });
+
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), floorMat);
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
 
-  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), mat(0x141619));
+  const ceil = new THREE.Mesh(
+    new THREE.PlaneGeometry(140, 140),
+    new THREE.MeshLambertMaterial({ color: 0x141619 }),
+  );
   ceil.rotation.x = Math.PI / 2;
   ceil.position.y = 5;
   scene.add(ceil);
 
-  const grid = new THREE.GridHelper(140, 70, 0x2a2e34, 0x1f2226);
-  grid.position.y = 0.02;
-  scene.add(grid);
+  // Ceiling trim strips over atrium
+  const trim = new THREE.Mesh(
+    new THREE.BoxGeometry(16.5, 0.15, 0.4),
+    frameMat,
+  );
+  trim.position.set(0, 4.9, -8);
+  scene.add(trim);
+  const trim2 = trim.clone(); trim2.position.z = 8; scene.add(trim2);
+  const trim3 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 16.5), frameMat);
+  trim3.position.set(-8, 4.9, 0); scene.add(trim3);
+  const trim4 = trim3.clone(); trim4.position.x = 8; scene.add(trim4);
 
-  const wallMat = mat(0x30343b);
-  const wallMat2 = mat(0x282c32);
-  const addWall = (cx, cz, w, d) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, 5, d), Math.random() > 0.5 ? wallMat : wallMat2);
-    m.position.set(cx, 2.5, cz);
-    scene.add(m);
+  /**
+   * Solid wall segment with Facility-style lower tile wainscot + upper concrete.
+   * Height is split: lower 1.6m tiles, upper remainder concrete.
+   */
+  const addWall = (cx, cz, w, d, h = 5) => {
+    const lowerH = Math.min(1.6, h * 0.32);
+    const upperH = h - lowerH;
+    const lower = new THREE.Mesh(new THREE.BoxGeometry(w, lowerH, d), lowerMat);
+    lower.position.set(cx, lowerH / 2, cz);
+    scene.add(lower);
+    if (upperH > 0.05) {
+      const upper = new THREE.Mesh(
+        new THREE.BoxGeometry(w, upperH, d),
+        Math.random() > 0.5 ? upperMat : upperMat2,
+      );
+      upper.position.set(cx, lowerH + upperH / 2, cz);
+      scene.add(upper);
+    }
   };
 
-  [-8, 8].forEach((sz) => { addWall(-5.5, sz, 5, 0.5); addWall(5.5, sz, 5, 0.5); });
-  [-8, 8].forEach((sx) => { addWall(sx, -5.5, 0.5, 5); addWall(sx, 5.5, 0.5, 5); });
+  /** Windowed wall along X (faces ±Z): solid segments with a glass pane in the middle. */
+  const addWindowedWallX = (z, x0, x1, windowCenter, windowW = 3.2) => {
+    const yGlass = 2.2;
+    const glassH = 1.8;
+    const half = windowW / 2;
+    if (windowCenter - half > x0 + 0.2) {
+      addWall((x0 + windowCenter - half) / 2, z, windowCenter - half - x0, 0.5);
+    }
+    if (x1 - (windowCenter + half) > 0.2) {
+      addWall((windowCenter + half + x1) / 2, z, x1 - windowCenter - half, 0.5);
+    }
+    // Sill
+    addWall(windowCenter, z, windowW, 0.5, 1.3);
+    // Header above glass
+    const headerTop = 5;
+    const headerBottom = yGlass + glassH / 2;
+    const headerH = headerTop - headerBottom;
+    const header = new THREE.Mesh(new THREE.BoxGeometry(windowW, headerH, 0.5), upperMat);
+    header.position.set(windowCenter, headerBottom + headerH / 2, z);
+    scene.add(header);
 
+    const frameL = new THREE.Mesh(new THREE.BoxGeometry(0.12, glassH + 0.2, 0.55), frameMat);
+    frameL.position.set(windowCenter - half, yGlass, z);
+    const frameR = frameL.clone();
+    frameR.position.x = windowCenter + half;
+    scene.add(frameL, frameR);
+
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(windowW - 0.15, glassH), glassMat);
+    glass.position.set(windowCenter, yGlass, z);
+    scene.add(glass);
+  };
+
+  /** Windowed wall along Z (faces ±X). */
+  const addWindowedWallZ = (x, z0, z1, windowCenter, windowW = 3.2) => {
+    const yGlass = 2.2;
+    const glassH = 1.8;
+    const half = windowW / 2;
+    if (windowCenter - half > z0 + 0.2) {
+      addWall(x, (z0 + windowCenter - half) / 2, 0.5, windowCenter - half - z0);
+    }
+    if (z1 - (windowCenter + half) > 0.2) {
+      addWall(x, (windowCenter + half + z1) / 2, 0.5, z1 - windowCenter - half);
+    }
+    addWall(x, windowCenter, 0.5, windowW, 1.3);
+    const headerH = 5 - (yGlass + glassH / 2);
+    const header = new THREE.Mesh(new THREE.BoxGeometry(0.5, headerH, windowW), upperMat);
+    header.position.set(x, yGlass + glassH / 2 + headerH / 2, windowCenter);
+    scene.add(header);
+
+    const frameL = new THREE.Mesh(new THREE.BoxGeometry(0.55, glassH + 0.2, 0.12), frameMat);
+    frameL.position.set(x, yGlass, windowCenter - half);
+    const frameR = frameL.clone();
+    frameR.position.z = windowCenter + half;
+    scene.add(frameL, frameR);
+
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(windowW - 0.15, glassH), glassMat);
+    glass.position.set(x, yGlass, windowCenter);
+    glass.rotation.y = Math.PI / 2;
+    scene.add(glass);
+  };
+
+  // ---- Atrium corners (solid, leaving door openings on axes) ----
+  [-8, 8].forEach((sz) => {
+    addWall(-5.5, sz, 5, 0.5);
+    addWall(5.5, sz, 5, 0.5);
+  });
+  [-8, 8].forEach((sx) => {
+    addWall(sx, -5.5, 0.5, 5);
+    addWall(sx, 5.5, 0.5, 5);
+  });
+
+  // ---- Wings: corridor walls with windows looking into rooms ----
   const zWing = (s) => {
-    const iz = s * 20, oz = s * 40;
-    addWall(-6.5, iz, 7, 0.5); addWall(6.5, iz, 7, 0.5);
+    const iz = s * 20;
+    const oz = s * 40;
+    // Inner threshold walls (beside door)
+    addWall(-6.5, iz, 7, 0.5);
+    addWall(6.5, iz, 7, 0.5);
+    // Outer room end wall
     addWall(0, oz, 20, 0.5);
-    addWall(-10, s * 30, 0.5, 20); addWall(10, s * 30, 0.5, 20);
-    addWall(-3, s * 14, 0.5, 12); addWall(3, s * 14, 0.5, 12);
+    // Side walls of room — windowed
+    addWindowedWallZ(-10, s * 20, s * 40, s * 30);
+    addWindowedWallZ(10, s * 20, s * 40, s * 30);
+    // Corridor side walls
+    addWall(-3, s * 14, 0.5, 12);
+    addWall(3, s * 14, 0.5, 12);
   };
   const xWing = (s) => {
-    const ix = s * 20, ox = s * 40;
-    addWall(ix, -6.5, 0.5, 7); addWall(ix, 6.5, 0.5, 7);
+    const ix = s * 20;
+    const ox = s * 40;
+    addWall(ix, -6.5, 0.5, 7);
+    addWall(ix, 6.5, 0.5, 7);
     addWall(ox, 0, 0.5, 20);
-    addWall(s * 30, -10, 20, 0.5); addWall(s * 30, 10, 20, 0.5);
-    addWall(s * 14, -3, 12, 0.5); addWall(s * 14, 3, 12, 0.5);
+    addWindowedWallX(-10, s * 20, s * 40, s * 30);
+    addWindowedWallX(10, s * 20, s * 40, s * 30);
+    addWall(s * 14, -3, 12, 0.5);
+    addWall(s * 14, 3, 12, 0.5);
   };
   zWing(-1); zWing(1); xWing(1); xWing(-1);
+
+  // Doors at thresholds
+  const doorSystem = buildDoors(THREE, scene, { doorMat: metalMat, frameMat });
 
   scene.add(new THREE.AmbientLight(0x3a4048, 1.2));
   scene.add(new THREE.HemisphereLight(0x8fb0c0, 0x1a1d21, 0.55));
@@ -81,26 +285,42 @@ export function buildLevel(THREE, scene) {
   lamp(0, -13, 0x2fd4c6, 8); lamp(0, 13, 0x2fd4c6, 8); lamp(13, 0, 0x2fd4c6, 8); lamp(-13, 0, 0x2fd4c6, 8);
 
   const sign = (x, y, z, text, ry, col) => {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(4, 1), new THREE.MeshBasicMaterial({ map: makeLabelTexture(THREE, text, col), transparent: false }));
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(4, 1),
+      new THREE.MeshBasicMaterial({ map: makeLabelTexture(THREE, text, col), transparent: false }),
+    );
     m.position.set(x, y, z);
     m.rotation.y = ry;
     scene.add(m);
   };
-  sign(0, 3.4, -20.2, 'ARCHIVE', 0, '#ffb000');
-  sign(0, 3.4, 20.2, 'COMMS', Math.PI, '#2fd4c6');
-  sign(20.2, 3.4, 0, 'ARMORY', -Math.PI / 2, '#ffb000');
-  sign(-20.2, 3.4, 0, 'RECORDS', Math.PI / 2, '#2fd4c6');
+  sign(0, 3.4, -20.2, 'HANGAR-1', 0, '#ffb000');
+  sign(0, 3.4, 20.2, 'XENO-LAB', Math.PI, '#2fd4c6');
+  sign(20.2, 3.4, 0, 'SIGINT', -Math.PI / 2, '#ffb000');
+  sign(-20.2, 3.4, 0, 'VAULT', Math.PI / 2, '#2fd4c6');
+  // Black-site warnings in the atrium
+  sign(0, 4.3, -7.75, 'S-4 · RESTRICTED', 0, '#ff5a52');
+  sign(0, 4.3, 7.75, 'USE OF DEADLY FORCE AUTHORIZED', Math.PI, '#ff5a52');
 
-  // PROJECTS (N, z-): stacked crates
-  for (let i = 0; i < 7; i++) {
-    const s = 1.4 + Math.random() * 0.5;
-    const c = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), mat(0x3a3f2e));
-    c.position.set(-6 + (i % 4) * 3.4, s / 2, -34 - Math.floor(i / 4) * 3.2);
-    c.rotation.y = Math.random() * 0.3;
-    scene.add(c);
-  }
+  // Hazard stripes at every door threshold
+  buildHazardStrips(THREE, scene, DOOR_DEFS);
 
-  // SKILLS (E, x+): control consoles
+  // HANGAR-1 (N): the recovered saucer + anti-grav pylons + element 115
+  const saucer = buildSaucer(THREE, scene, { x: 0, z: -32 });
+  buildE115Crates(THREE, scene, assets);
+  const mat = (col) => new THREE.MeshLambertMaterial({ color: col, flatShading: true });
+  // Craft-analysis terminal (the intel interactable sits here)
+  const term = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.3, 0.9), mat(0x2b3138));
+  term.position.set(0, 0.65, -25.5);
+  scene.add(term);
+  const termScr = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.8), new THREE.MeshBasicMaterial({ color: 0xffb000 }));
+  termScr.position.set(0, 1.15, -25.04);
+  scene.add(termScr);
+  // Slow red warning beacon
+  const beacon = new THREE.PointLight(0xff3020, 6, 26, 1.6);
+  beacon.position.set(0, 4.5, -30);
+  scene.add(beacon);
+
+  // SIGINT (E): consoles + MAJESTIC display + briefing static monitor
   for (let i = 0; i < 4; i++) {
     const con = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.4, 1), mat(0x2b3138));
     con.position.set(34, 0.7, -6 + i * 4);
@@ -110,31 +330,24 @@ export function buildLevel(THREE, scene) {
     scr.rotation.y = Math.PI / 2;
     scene.add(scr);
   }
+  const sigint = buildSigintScreens(THREE, scene);
 
-  // CONTACT (S, z+): comms tower / dish
-  const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.9, 4, 6), mat(0x2b3138));
-  tower.position.set(0, 2, 34);
-  scene.add(tower);
-  const dish = new THREE.Mesh(
-    new THREE.SphereGeometry(1.8, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2),
-    new THREE.MeshLambertMaterial({ color: 0x3a4048, flatShading: true, side: THREE.DoubleSide }),
-  );
-  dish.position.set(0, 4, 34);
-  dish.rotation.x = Math.PI;
-  scene.add(dish);
+  // XENO-LAB (S): containment cell with the alien
+  const containment = buildContainment(THREE, scene, { x: 0, z: 32 });
 
-  // ABOUT (W, x-): desk
-  const desk = new THREE.Mesh(new THREE.BoxGeometry(3, 1.1, 1.4), mat(0x33291f));
-  desk.position.set(-32, 0.55, 0);
-  scene.add(desk);
+  // VAULT (W): filing cabinets, classified folders, reading table
+  buildVaultArchives(THREE, scene);
 
-  // RESUME (atrium): glowing data pedestal
+  // DATA CORE (atrium): glowing data pedestal
   const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, 1.2, 8), mat(0x2b3138));
   ped.position.set(0, 0.6, 3);
   scene.add(ped);
-  const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.7), new THREE.MeshBasicMaterial({ color: 0x2fd4c6, wireframe: true }));
+  const core = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.7),
+    new THREE.MeshBasicMaterial({ color: 0x2fd4c6, wireframe: true }),
+  );
   core.position.set(0, 1.9, 3);
   scene.add(core);
 
-  return { core };
+  return { core, doorSystem, saucer, sigint, containment, beacon };
 }

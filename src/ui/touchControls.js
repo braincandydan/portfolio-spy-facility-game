@@ -1,121 +1,178 @@
-// On-screen touch controls: a left-side virtual joystick for movement, a
-// right-side drag zone for look, plus tap buttons for interact/fire/watch.
-// Only mounted when main.js detects a touch-capable device.
+// Universal GoldenEye-style controls: one N64 stick (pointer events — works with
+// mouse and touch on every device) plus FIRE / AIM / INTERACT / CYCLE / WATCH.
 
 export function isTouchDevice() {
   return ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || (window.matchMedia?.('(pointer: coarse)').matches ?? false);
 }
 
-const JOY_RADIUS = 50;
+const JOY_RADIUS = 58;
 
-export function mountTouchControls(root, game) {
+/**
+ * Mount the single-stick control layer. Always shown during gameplay.
+ */
+export function mountN64Controls(root, game) {
   const wrap = document.createElement('div');
-  wrap.className = 'touch-ui hidden';
+  wrap.className = 'n64-ui hidden';
 
-  const moveZone = document.createElement('div');
-  moveZone.className = 'touch-zone move';
-  wrap.appendChild(moveZone);
+  // Forgiving grab zone (bottom-left corner) — you can start the drag anywhere
+  // near the stick, not just on the knob. Big win for mouse users.
+  const stickZone = document.createElement('div');
+  stickZone.className = 'n64-stick-zone';
+  wrap.appendChild(stickZone);
 
-  const lookZone = document.createElement('div');
-  lookZone.className = 'touch-zone look';
-  wrap.appendChild(lookZone);
+  // Fixed stick with visible octagonal gate
+  const stickWrap = document.createElement('div');
+  stickWrap.className = 'n64-stick';
+  stickWrap.innerHTML = `
+    <svg class="n64-stick__gate" viewBox="0 0 100 100" aria-hidden="true">
+      <polygon points="30,5 70,5 95,30 95,70 70,95 30,95 5,70 5,30" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="50" cy="50" r="6" fill="currentColor" opacity="0.25"/>
+    </svg>
+    <div class="n64-stick__knob"></div>
+  `;
+  stickZone.appendChild(stickWrap);
 
-  const joyBase = document.createElement('div');
-  joyBase.className = 'touch-joy-base hidden';
-  const joyKnob = document.createElement('div');
-  joyKnob.className = 'touch-joy-knob';
-  joyBase.appendChild(joyKnob);
-  wrap.appendChild(joyBase);
+  const knob = stickWrap.querySelector('.n64-stick__knob');
 
-  const watchBtn = el('button', 'touch-btn touch-btn--watch', '◷');
-  const interactBtn = el('button', 'touch-btn touch-btn--interact hidden', '◉<br>E');
-  const fireBtn = el('button', 'touch-btn touch-btn--fire hidden', '◎');
+  // Aim-mode floating crosshair (positioned in screen space from NDC)
+  const aimReticle = document.createElement('div');
+  aimReticle.className = 'n64-aim-reticle hidden';
+  aimReticle.innerHTML = '<i class="l"></i><i class="r"></i><i class="t"></i><i class="b"></i><i class="dot"></i>';
+  wrap.appendChild(aimReticle);
+
+  const lockBanner = document.createElement('div');
+  lockBanner.className = 'n64-lock-banner hidden';
+  wrap.appendChild(lockBanner);
+
+  const watchBtn = el('button', 'n64-btn n64-btn--watch', '◷');
+  const cycleBtn = el('button', 'n64-btn n64-btn--cycle hidden', 'C<br><span>SWAP</span>');
+  const interactBtn = el('button', 'n64-btn n64-btn--interact hidden', 'E<br><span>USE</span>');
+  const aimBtn = el('button', 'n64-btn n64-btn--aim', 'R<br><span>AIM</span>');
+  const fireBtn = el('button', 'n64-btn n64-btn--fire', 'Z<br><span>FIRE</span>');
+
   wrap.appendChild(watchBtn);
+  wrap.appendChild(cycleBtn);
   wrap.appendChild(interactBtn);
+  wrap.appendChild(aimBtn);
   wrap.appendChild(fireBtn);
+
+  const itemLabel = document.createElement('div');
+  itemLabel.className = 'n64-item-label hidden';
+  wrap.appendChild(itemLabel);
 
   root.appendChild(wrap);
 
-  // ---- movement joystick (dynamic — appears wherever the left zone is touched) ----
-  let moveTouchId = null;
-  let origin = { x: 0, y: 0 };
+  // ---- stick via pointer events ----
+  let stickPointerId = null;
+  const stickRect = () => stickWrap.getBoundingClientRect();
 
-  moveZone.addEventListener('touchstart', (e) => {
-    if (moveTouchId !== null) return;
-    e.preventDefault();
-    const t = e.changedTouches[0];
-    moveTouchId = t.identifier;
-    origin = { x: t.clientX, y: Math.min(t.clientY, window.innerHeight - 110) };
-    joyBase.style.left = `${origin.x}px`;
-    joyBase.style.top = `${origin.y}px`;
-    joyBase.classList.remove('hidden');
-    joyKnob.style.transform = 'translate(-50%, -50%)';
-  }, { passive: false });
-
-  moveZone.addEventListener('touchmove', (e) => {
-    for (const t of e.changedTouches) {
-      if (t.identifier !== moveTouchId) continue;
-      e.preventDefault();
-      const dx = t.clientX - origin.x, dy = t.clientY - origin.y;
-      const d = Math.hypot(dx, dy);
-      const k = d > JOY_RADIUS ? JOY_RADIUS / d : 1;
-      const kx = dx * k, ky = dy * k;
-      joyKnob.style.transform = `translate(calc(-50% + ${kx}px), calc(-50% + ${ky}px))`;
-      game.setJoystick(kx / JOY_RADIUS, -ky / JOY_RADIUS);
-    }
-  }, { passive: false });
-
-  const endMove = (e) => {
-    for (const t of e.changedTouches) {
-      if (t.identifier !== moveTouchId) continue;
-      moveTouchId = null;
-      joyBase.classList.add('hidden');
-      game.setJoystick(0, 0);
-    }
+  const setKnob = (nx, ny) => {
+    knob.style.transform = `translate(calc(-50% + ${nx * JOY_RADIUS}px), calc(-50% + ${-ny * JOY_RADIUS}px))`;
+    game.setJoystick(nx, ny);
   };
-  moveZone.addEventListener('touchend', endMove);
-  moveZone.addEventListener('touchcancel', endMove);
 
-  // ---- look drag ----
-  let lookTouchId = null;
-  let lastX = 0, lastY = 0;
-
-  lookZone.addEventListener('touchstart', (e) => {
-    if (lookTouchId !== null) return;
-    e.preventDefault();
-    const t = e.changedTouches[0];
-    lookTouchId = t.identifier;
-    lastX = t.clientX;
-    lastY = t.clientY;
-  }, { passive: false });
-
-  lookZone.addEventListener('touchmove', (e) => {
-    for (const t of e.changedTouches) {
-      if (t.identifier !== lookTouchId) continue;
-      e.preventDefault();
-      game.applyLook(t.clientX - lastX, t.clientY - lastY);
-      lastX = t.clientX;
-      lastY = t.clientY;
-    }
-  }, { passive: false });
-
-  const endLook = (e) => {
-    for (const t of e.changedTouches) if (t.identifier === lookTouchId) lookTouchId = null;
+  const readStick = (clientX, clientY) => {
+    const r = stickRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    let dx = (clientX - cx) / JOY_RADIUS;
+    let dy = -(clientY - cy) / JOY_RADIUS;
+    const mag = Math.hypot(dx, dy);
+    if (mag > 1) { dx /= mag; dy /= mag; }
+    setKnob(dx, dy);
   };
-  lookZone.addEventListener('touchend', endLook);
-  lookZone.addEventListener('touchcancel', endLook);
+
+  stickZone.addEventListener('pointerdown', (e) => {
+    if (stickPointerId !== null) return;
+    e.preventDefault();
+    stickPointerId = e.pointerId;
+    stickZone.setPointerCapture(e.pointerId);
+    stickWrap.classList.add('active');
+    readStick(e.clientX, e.clientY);
+  });
+
+  stickZone.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== stickPointerId) return;
+    e.preventDefault();
+    readStick(e.clientX, e.clientY);
+  });
+
+  const endStick = (e) => {
+    if (e.pointerId !== stickPointerId) return;
+    stickPointerId = null;
+    stickWrap.classList.remove('active');
+    setKnob(0, 0);
+  };
+  stickZone.addEventListener('pointerup', endStick);
+  stickZone.addEventListener('pointercancel', endStick);
 
   // ---- buttons ----
   watchBtn.addEventListener('click', (e) => { e.preventDefault(); game.toggleWatch(); });
   interactBtn.addEventListener('click', (e) => { e.preventDefault(); game.interact(); });
-  fireBtn.addEventListener('click', (e) => { e.preventDefault(); game.shoot(); });
+  cycleBtn.addEventListener('click', (e) => { e.preventDefault(); game.cycleItem(); });
+  fireBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    fireBtn.classList.add('pressed');
+    game.shoot();
+  });
+  fireBtn.addEventListener('pointerup', () => fireBtn.classList.remove('pressed'));
+  fireBtn.addEventListener('pointerleave', () => fireBtn.classList.remove('pressed'));
+
+  // Hold-to-aim
+  const startAim = (e) => {
+    e.preventDefault();
+    aimBtn.classList.add('pressed');
+    game.setAiming(true);
+  };
+  const endAim = () => {
+    aimBtn.classList.remove('pressed');
+    game.setAiming(false);
+  };
+  aimBtn.addEventListener('pointerdown', startAim);
+  aimBtn.addEventListener('pointerup', endAim);
+  aimBtn.addEventListener('pointerleave', endAim);
+  aimBtn.addEventListener('pointercancel', endAim);
 
   game.subscribe((state) => {
     const gameplay = state.booted && state.active;
     wrap.classList.toggle('hidden', !gameplay);
     interactBtn.classList.toggle('hidden', !(gameplay && state.prompt));
-    fireBtn.classList.toggle('hidden', !(gameplay && state.hasGun));
+    cycleBtn.classList.toggle('hidden', !(gameplay && state.inventory.length > 1));
+    fireBtn.classList.toggle('hidden', !(gameplay && state.activeItem));
+    aimBtn.classList.toggle('hidden', !(gameplay && state.activeItem === 'pistol'));
+
+    // Item label
+    if (gameplay && state.activeItem) {
+      itemLabel.classList.remove('hidden');
+      itemLabel.textContent = state.activeItem.toUpperCase();
+    } else {
+      itemLabel.classList.add('hidden');
+    }
+
+    // Lock banner
+    if (gameplay && state.lockMsg) {
+      lockBanner.classList.remove('hidden');
+      lockBanner.textContent = state.lockMsg;
+    } else {
+      lockBanner.classList.add('hidden');
+    }
+
+    // Aim reticle position from NDC
+    if (gameplay && state.aiming) {
+      aimReticle.classList.remove('hidden');
+      const x = (state.aimCross.x * 0.5 + 0.5) * 100;
+      const y = (-state.aimCross.y * 0.5 + 0.5) * 100;
+      aimReticle.style.left = `${x}%`;
+      aimReticle.style.top = `${y}%`;
+    } else {
+      aimReticle.classList.add('hidden');
+    }
   });
+}
+
+/** @deprecated use mountN64Controls — kept so old imports don't break mid-refactor */
+export function mountTouchControls(root, game) {
+  return mountN64Controls(root, game);
 }
 
 function el(tag, className, html) {

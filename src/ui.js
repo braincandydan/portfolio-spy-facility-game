@@ -47,6 +47,9 @@ export function mountUI(root, game) {
   const panel = buildPanel(game);
   root.appendChild(panel.node);
 
+  const dialogue = buildDialogue(game);
+  root.appendChild(dialogue.node);
+
   game.subscribe((state) => {
     const visited = game.objectivesVisited, total = game.objectivesTotal;
     hud.update(state, visited, total);
@@ -55,6 +58,7 @@ export function mountUI(root, game) {
     pause.update(state);
     watch.update(state, visited, total);
     panel.update(state);
+    dialogue.update(state);
   });
 
   return { mount: () => game.init() };
@@ -100,25 +104,23 @@ function buildHud(game) {
   node.appendChild(stats);
 
   const prompt = el('div', 'hud__prompt hidden', `
-    <div class="box">◉ HOLD <span class="key">[E]</span> — <span data-prompt-verb></span> <span data-prompt-name></span></div>
+    <div class="box">◉ <span class="key">[E]</span> — <span data-prompt-verb></span> <span data-prompt-name></span></div>
   `);
   node.appendChild(prompt);
 
-  const navHint = isTouchDevice() ? 'open the WATCH [◷] for navigation &nbsp;·&nbsp; drag to move / look &nbsp;·&nbsp; tap ◉ to interact' : 'open the WATCH [TAB] for navigation &nbsp;·&nbsp; move [WASD] &nbsp;·&nbsp; interact [E]';
+  const navHint = 'stick or arrows/WASD to move &nbsp;·&nbsp; hold [R] to aim &nbsp;·&nbsp; [Z] fire &nbsp;·&nbsp; [E] use &nbsp;·&nbsp; [C] swap gadgets &nbsp;·&nbsp; [TAB] watch';
   const tickerText = `<span class="tag">◆ OBJECTIVE</span> — infiltrate the facility &nbsp;·&nbsp; recover all 5 intel caches &nbsp;·&nbsp; access the DOSSIER for extraction papers &nbsp;·&nbsp; ${navHint} &nbsp;·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
   const ticker = el('div', 'hud__ticker', `<div class="track">${tickerText}${tickerText}</div>`);
   node.appendChild(ticker);
 
-  if (!isTouchDevice()) {
-    const watchHint = el('div', 'hud__watch-hint', `◷ <span class="key">[TAB]</span> WATCH`);
-    node.appendChild(watchHint);
-  }
+  const watchHint = el('div', 'hud__watch-hint', `◷ WATCH`);
+  node.appendChild(watchHint);
 
   return {
     node,
     update(state) {
       node.classList.toggle('hidden', !state.booted);
-      crosshair.classList.toggle('hidden', !state.active);
+      crosshair.classList.toggle('hidden', !state.active || state.aiming);
       sector.querySelector('[data-area]').textContent = state.area;
       sector.querySelector('[data-coords]').textContent = state.coords;
       intel.querySelector('[data-visited]').textContent = game.objectivesVisited;
@@ -136,9 +138,7 @@ function buildHud(game) {
 }
 
 function buildBoot(game) {
-  const keysLine = isTouchDevice()
-    ? 'DRAG LEFT MOVE &nbsp; · &nbsp; DRAG RIGHT LOOK &nbsp; · &nbsp; ◉ INTERACT &nbsp; · &nbsp; ◷ WATCH'
-    : '[WASD] MOVE &nbsp; · &nbsp; [MOUSE] LOOK &nbsp; · &nbsp; [E] INTERACT &nbsp; · &nbsp; [TAB] WATCH &nbsp; · &nbsp; [ESC] PAUSE';
+  const keysLine = 'STICK / ARROWS / WASD MOVE &nbsp; · &nbsp; HOLD [R] AIM &nbsp; · &nbsp; [Z] FIRE &nbsp; · &nbsp; [E] USE &nbsp; · &nbsp; [C] SWAP &nbsp; · &nbsp; [TAB] WATCH &nbsp; · &nbsp; [ESC] PAUSE';
   const node = el('div', 'boot', `
     <div class="boot__eyebrow">CLASSIFIED // LEVEL 00 CLEARANCE</div>
     <div class="boot__title">FIELD&nbsp;OPERATIVE</div>
@@ -161,7 +161,7 @@ function buildBoot(game) {
 }
 
 function buildPause(game) {
-  const hint = isTouchDevice() ? 'drag to move & look · tap ◷ for watch' : '[WASD] move · drag mouse to look · [TAB] watch';
+  const hint = 'stick or arrows/WASD move · hold [R] aim · [Z] fire · [E] use · [C] swap · [TAB] watch';
   const node = el('div', 'pause hidden', `
     <div class="pause__title">PAUSED</div>
     <div class="pause__cta">▶ ${isTouchDevice() ? 'TAP' : 'CLICK'} TO RESUME</div>
@@ -338,8 +338,31 @@ function buildPanel(game) {
     update(state) {
       node.classList.toggle('hidden', !state.panel);
       if (!state.panel) return;
-      header.querySelector('[data-panel-title]').textContent = ZONE_NAMES[state.panel];
+      header.querySelector('[data-panel-title]').textContent = ZONE_NAMES[state.panel] || 'BRIEFING REEL';
       body.innerHTML = renderPanelBody(state.panel);
+    },
+  };
+}
+
+function buildDialogue(game) {
+  const node = el('div', 'dialogue hidden');
+  const box = el('div', 'dialogue__box', `
+    <div class="dialogue__speaker" data-speaker></div>
+    <div class="dialogue__line" data-line></div>
+    <div class="dialogue__hint">[E] ▸ <span data-progress></span></div>
+  `);
+  node.appendChild(box);
+  box.addEventListener('click', () => game.advanceDialogue());
+
+  return {
+    node,
+    update(state) {
+      node.classList.toggle('hidden', !state.dialogue);
+      if (!state.dialogue) return;
+      const d = state.dialogue;
+      box.querySelector('[data-speaker]').textContent = d.speaker;
+      box.querySelector('[data-line]').textContent = d.lines[d.idx];
+      box.querySelector('[data-progress]').textContent = `${d.idx + 1} / ${d.lines.length}`;
     },
   };
 }
@@ -347,13 +370,13 @@ function buildPanel(game) {
 function renderPanelBody(panelId) {
   if (panelId === 'projects') {
     return `
-      <div class="panel__heading">PROJECT CACHE</div>
-      <div class="panel__sub">Recovered assets — replace crates with your work.</div>
+      <div class="panel__heading">RECOVERED CRAFT — PROJECT FILES</div>
+      <div class="panel__sub">Reverse-engineering reports. Each craft is one of your projects.</div>
       <div class="crate-grid">
         ${projects.map((p) => `
           <div class="crate">
             <div class="crate__thumb">▦ SCREENSHOT</div>
-            <div class="crate__no">CRATE ${p.no}</div>
+            <div class="crate__no">CRAFT ${p.no}</div>
             <div class="crate__name">${p.name}</div>
             <div class="crate__desc">${p.desc}</div>
             <div class="crate__tech">${p.tech}</div>
@@ -364,8 +387,8 @@ function renderPanelBody(panelId) {
   }
   if (panelId === 'skills') {
     return `
-      <div class="panel__heading">ARMORY — CAPABILITIES</div>
-      <div class="panel__sub">Loadout calibrated. Replace with your real stack.</div>
+      <div class="panel__heading">SIGINT — DECRYPTED CAPABILITIES</div>
+      <div class="panel__sub">Digital intercepts. Replace with your real stack.</div>
       <div class="skill-grid">
         ${skills.map((k) => `
           <div class="skill">
@@ -378,8 +401,8 @@ function renderPanelBody(panelId) {
   }
   if (panelId === 'about') {
     return `
-      <div class="panel__heading">OPERATIVE FILE</div>
-      <div class="panel__sub">Personnel dossier — for your bio.</div>
+      <div class="panel__heading">PERSONNEL FILE — EYES ONLY</div>
+      <div class="panel__sub">Paper dossier, pulled from the vault cabinets.</div>
       <div class="about-layout">
         <div class="about-photo">▣ PHOTO</div>
         <div class="about-bio">
@@ -393,8 +416,8 @@ function renderPanelBody(panelId) {
   }
   if (panelId === 'contact') {
     return `
-      <div class="panel__heading">COMMS TERMINAL</div>
-      <div class="panel__sub">Open a secure channel.</div>
+      <div class="panel__heading">SECURE CHANNELS — J-RÖD AUTHORIZED</div>
+      <div class="panel__sub">The subject opened these frequencies for you. Use them wisely.</div>
       <div class="contact-list">
         ${comms.slice(0, 3).map((c) => `<a class="contact-row" href="${c.href}"><span class="k">${c.icon} ${c.label}</span>${c.value}</a>`).join('')}
       </div>
@@ -410,6 +433,20 @@ function renderPanelBody(panelId) {
           <div class="name">${profile.resume.label}</div>
           <div class="meta">${profile.resume.meta}</div>
           <a class="btn-solid" href="${profile.resume.href}">⬇ DOWNLOAD</a>
+        </div>
+      </div>
+    `;
+  }
+  if (panelId === 'briefing') {
+    return `
+      <div class="panel__heading">BRIEFING REEL — S-4 ORIENTATION</div>
+      <div class="panel__sub">Video evidence. Drop an .mp4 at <code>public/video/briefing.mp4</code> to screen your own footage (demo reel, talk, project walkthrough).</div>
+      <div class="briefing-video">
+        <video src="video/briefing.mp4" controls playsinline preload="metadata"
+               onerror="this.closest('.briefing-video').classList.add('missing')"></video>
+        <div class="briefing-video__fallback">
+          ▲ NO SIGNAL — REEL NOT FOUND<br>
+          <span>place briefing.mp4 in public/video/</span>
         </div>
       </div>
     `;

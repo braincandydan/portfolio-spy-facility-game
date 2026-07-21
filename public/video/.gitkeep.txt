@@ -1,0 +1,1 @@
+# Drop briefing.mp4 here — it plays on the BRIEFING REEL screen in the SIGINT lab.

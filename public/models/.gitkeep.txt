@@ -1,0 +1,2 @@
+# Drop .glb files here (pistol.glb, crate.glb, keycard.glb, camera.glb).
+# See docs/BLENDER_PIPELINE.md

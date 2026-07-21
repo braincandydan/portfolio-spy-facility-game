@@ -1,7 +1,7 @@
 import './style.css';
 import { Game } from './game/Game.js';
 import { mountUI } from './ui.js';
-import { isTouchDevice, mountTouchControls } from './ui/touchControls.js';
+import { isTouchDevice, mountN64Controls } from './ui/touchControls.js';
 
 const app = document.getElementById('app');
 const touch = isTouchDevice();
@@ -11,5 +11,6 @@ const { mount } = mountUI(app, game);
 
 // mountUI builds the .viewport div that Three.js renders into — grab it now that it exists.
 game.mountEl = app.querySelector('.viewport');
-if (touch) mountTouchControls(app, game);
+// GoldenEye stick is universal — always mount (pointer events work with mouse + touch).
+mountN64Controls(app, game);
 mount();

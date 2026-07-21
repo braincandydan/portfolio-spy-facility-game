@@ -1,9 +1,16 @@
 import { buildLevel } from './level.js';
 import { ZONES, ZONE_ORDER, isWalkable, areaAt, START_POSITION } from './zones.js';
 import { AudioEngine } from '../audio.js';
+import {
+  GUN_PICKUP_POSITION, buildPickupGun, buildViewmodelGun, buildTargets,
+  spawnMuzzleFlash, spawnTracer, spawnHitSpark, flashTarget,
+} from './gun.js';
 
 const MOVE_SPEED = 8;
 const PITCH_LIMIT = 1.4;
+const RECOIL_KICK = 0.05;
+const RECOIL_DECAY = 10;
+const PROXIMITY_RADIUS = 4;
 
 /**
  * Owns the Three.js scene, first-person controls, and all interactive-portfolio
@@ -29,6 +36,7 @@ export class Game {
       objectives: { projects: false, skills: false, about: false, contact: false, resume: false },
       soundOn: true,
       sens: sensitivity,
+      hasGun: false,
       err: null,
     };
     this._listeners = new Set();
@@ -41,6 +49,9 @@ export class Game {
     this.pointerLocked = false;
     this.dragging = false;
     this._alive = false;
+    this._effects = [];
+    this._recoilPitch = 0;
+    this._joyVec = { x: 0, y: 0 };
 
     this._onKeyDown = this._onKeyDown.bind(this);
     this._onKeyUp = this._onKeyUp.bind(this);
@@ -81,11 +92,12 @@ export class Game {
       const scene = new THREE.Scene();
       const CONCRETE = 0x23262b;
       scene.background = new THREE.Color(CONCRETE);
-      scene.fog = new THREE.Fog(CONCRETE, 9, 52);
+      scene.fog = new THREE.Fog(CONCRETE, 13, 68);
 
       const cam = new THREE.PerspectiveCamera(72, W / H, 0.1, 200);
       cam.rotation.order = 'YXZ';
       cam.position.set(this.px, 1.7, this.pz);
+      scene.add(cam); // camera must be in the scene graph or its children (the viewmodel) won't render
 
       const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
       renderer.setPixelRatio(1);
@@ -98,6 +110,15 @@ export class Game {
 
       const { core } = buildLevel(THREE, scene);
       this._core = core;
+
+      this._gunPickup = buildPickupGun(THREE);
+      scene.add(this._gunPickup);
+      this._targets = buildTargets(THREE, scene);
+      const { group: viewmodel, muzzle } = buildViewmodelGun(THREE);
+      cam.add(viewmodel);
+      this._viewmodel = viewmodel;
+      this._muzzle = muzzle;
+      this._raycaster = new THREE.Raycaster();
 
       this._clock = new THREE.Clock();
       this._alive = true;
@@ -140,10 +161,12 @@ export class Game {
       if (this.keys.KeyS) { mx -= fx; mz -= fz; }
       if (this.keys.KeyD) { mx += rx; mz += rz; }
       if (this.keys.KeyA) { mx -= rx; mz -= rz; }
+      const jx = this._joyVec.x, jy = this._joyVec.y;
+      if (jx || jy) { mx += fx * jy + rx * jx; mz += fz * jy + rz * jx; }
       const l = Math.hypot(mx, mz);
       if (l > 0) {
-        mx /= l; mz /= l;
-        const dx = mx * MOVE_SPEED * dt, dz = mz * MOVE_SPEED * dt;
+        const mag = Math.min(1, l);
+        const dx = (mx / l) * MOVE_SPEED * mag * dt, dz = (mz / l) * MOVE_SPEED * mag * dt;
         if (isWalkable(this.px + dx, this.pz)) this.px += dx;
         if (isWalkable(this.px, this.pz + dz)) this.pz += dz;
       }
@@ -152,7 +175,8 @@ export class Game {
 
     this.cam.position.set(this.px, 1.7, this.pz);
     this.cam.rotation.y = this.yaw;
-    this.cam.rotation.x = this.pitch;
+    this._recoilPitch *= Math.exp(-dt * RECOIL_DECAY);
+    this.cam.rotation.x = this.pitch + this._recoilPitch;
 
     if (this._core) {
       this._core.rotation.y += dt * 1.2;
@@ -160,19 +184,31 @@ export class Game {
       this._core.position.y = 1.9 + Math.sin(performance.now() / 500) * 0.12;
     }
 
+    if (this._gunPickup) {
+      this._gunPickup.rotation.y += dt * 1.4;
+      this._gunPickup.position.y = GUN_PICKUP_POSITION.y + Math.sin(performance.now() / 450) * 0.15;
+      if (this._gunPickup.userData.ring) this._gunPickup.userData.ring.rotation.z += dt * 0.8;
+    }
+
+    if (this._effects.length) this._effects = this._effects.filter((fx) => fx.update(dt));
+
     this.renderer.render(this.scene, this.cam);
   }
 
   _updateZones() {
-    let near = null, nd = 4;
+    let near = null, nd = PROXIMITY_RADIUS, nearVerb = 'ACCESS';
     for (const z of ZONES) {
       const d = Math.hypot(this.px - z.target[0], this.pz - z.target[1]);
-      if (d < nd) { nd = d; near = z; }
+      if (d < nd) { nd = d; near = z; nearVerb = 'ACCESS'; }
+    }
+    if (!this.state.hasGun) {
+      const gd = Math.hypot(this.px - GUN_PICKUP_POSITION.x, this.pz - GUN_PICKUP_POSITION.z);
+      if (gd < nd) { nd = gd; near = { id: 'gun', name: 'SIDEARM' }; nearVerb = 'TAKE'; }
     }
     const area = areaAt(this.px, this.pz);
     const p = this.px, q = this.pz;
     const coords = `${p >= 0 ? '+' : ''}${p.toFixed(1)} · ${q >= 0 ? '+' : ''}${q.toFixed(1)}`;
-    const prompt = near ? { zone: near.id, name: near.name } : null;
+    const prompt = near ? { zone: near.id, name: near.name, verb: nearVerb } : null;
 
     if (this._last.area !== area || this._last.coords !== coords || JSON.stringify(this._last.prompt) !== JSON.stringify(prompt)) {
       this._last = { area, coords, prompt };
@@ -194,8 +230,9 @@ export class Game {
       }
       return;
     }
-    if (e.code === 'KeyE' && this.state.active && this.state.prompt) {
-      this.openPanel(this.state.prompt.zone);
+    if (e.code === 'KeyE') {
+      if (this.state.active && this.state.prompt) { this.interact(); return; }
+      this.keys[e.code] = true;
       return;
     }
     this.keys[e.code] = true;
@@ -206,14 +243,14 @@ export class Game {
   _onMouseMove(e) {
     if (!this.state.active) return;
     if (!this.pointerLocked && !this.dragging) return;
-    const s = this.state.sens * 0.001;
-    this.yaw -= e.movementX * s;
-    this.pitch -= e.movementY * s;
-    this.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, this.pitch));
+    this.applyLook(e.movementX, e.movementY);
   }
 
   _onMouseDown() {
-    if (this.state.active && !this.state.showWatch && !this.state.panel) this.dragging = true;
+    if (this.state.active && !this.state.showWatch && !this.state.panel) {
+      this.dragging = true;
+      if (this.state.hasGun) this.shoot();
+    }
   }
 
   _onMouseUp() { this.dragging = false; }
@@ -234,6 +271,17 @@ export class Game {
   _dropLock() {
     try { document.exitPointerLock(); } catch { /* noop */ }
   }
+
+  // ---- touch input (bind these to the on-screen joystick / look layer) ----
+  applyLook = (dx, dy) => {
+    if (!this.state.active) return;
+    const s = this.state.sens * 0.001;
+    this.yaw -= dx * s;
+    this.pitch -= dy * s;
+    this.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, this.pitch));
+  };
+
+  setJoystick = (x, y) => { this._joyVec = { x, y }; };
 
   // ---- public actions (bind these to UI) ----
   canvasClick = () => {
@@ -295,6 +343,55 @@ export class Game {
     this.audio.blip(460);
     this.setState({ panel: null, active: true });
     this._tryLock();
+  };
+
+  interact = () => {
+    if (!(this.state.active && this.state.prompt)) return;
+    if (this.state.prompt.zone === 'gun') this.pickupGun();
+    else this.openPanel(this.state.prompt.zone);
+  };
+
+  pickupGun = () => {
+    if (this.state.hasGun) return;
+    if (this._gunPickup) {
+      this.scene.remove(this._gunPickup);
+      this._gunPickup.traverse((o) => { o.geometry?.dispose(); o.material?.dispose?.(); });
+      this._gunPickup = null;
+    }
+    if (this._viewmodel) this._viewmodel.visible = true;
+    this.audio.blip(820);
+    setTimeout(() => this.audio.blip(1200), 90);
+    this.setState({ hasGun: true });
+  };
+
+  shoot = () => {
+    const s = this.state;
+    if (!(s.active && s.hasGun && !s.showWatch && !s.panel)) return;
+    const THREE = this.THREE;
+    this._raycaster.setFromCamera({ x: 0, y: 0 }, this.cam);
+    const hits = this._raycaster.intersectObjects(this.scene.children, true);
+
+    const muzzleWorld = new THREE.Vector3();
+    this._muzzle.getWorldPosition(muzzleWorld);
+
+    let hitPoint;
+    if (hits.length) {
+      hitPoint = hits[0].point;
+      this._effects.push(spawnHitSpark(THREE, this.scene, hitPoint));
+      if (hits[0].object.userData.isTarget) {
+        this._effects.push(flashTarget(THREE, hits[0].object));
+        this.audio.blip(1300);
+      }
+    } else {
+      const dir = new THREE.Vector3();
+      this.cam.getWorldDirection(dir);
+      hitPoint = muzzleWorld.clone().add(dir.multiplyScalar(60));
+    }
+
+    this._effects.push(spawnMuzzleFlash(THREE, this.scene, muzzleWorld));
+    this._effects.push(spawnTracer(THREE, this.scene, muzzleWorld, hitPoint));
+    this._recoilPitch = Math.min(0.14, this._recoilPitch + RECOIL_KICK);
+    this.audio.blip(180);
   };
 
   _mark(id) {

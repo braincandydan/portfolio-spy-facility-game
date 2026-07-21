@@ -65,8 +65,8 @@ export function buildLevel(THREE, scene) {
   };
   zWing(-1); zWing(1); xWing(1); xWing(-1);
 
-  scene.add(new THREE.AmbientLight(0x3a4048, 0.9));
-  scene.add(new THREE.HemisphereLight(0x8fb0c0, 0x1a1d21, 0.4));
+  scene.add(new THREE.AmbientLight(0x3a4048, 1.2));
+  scene.add(new THREE.HemisphereLight(0x8fb0c0, 0x1a1d21, 0.55));
 
   const lamp = (x, z, col, intensity) => {
     const p = new THREE.PointLight(col, intensity, 34, 1.6);

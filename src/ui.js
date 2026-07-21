@@ -1,5 +1,6 @@
 import { ZONE_ORDER, ZONE_NAMES, ZONE_SUBS } from './game/zones.js';
 import { profile, comms, projects, skills } from './content.js';
+import { isTouchDevice } from './ui/touchControls.js';
 
 const CLEARANCE_LABELS = ['UNAUTHORIZED', 'RECRUIT', 'FIELD', 'OPERATIVE', 'SENIOR', '00 — AGENT'];
 
@@ -78,6 +79,7 @@ function buildHud(game) {
     <div class="label">INTEL RECOVERED</div>
     <div class="value"><span data-visited></span><span class="total">/<span data-total></span></span></div>
     <div class="clearance">CLEARANCE — <span data-clearance></span></div>
+    <div class="clearance hidden" data-armed>◆ SIDEARM ARMED</div>
   `);
   node.appendChild(intel);
 
@@ -98,16 +100,19 @@ function buildHud(game) {
   node.appendChild(stats);
 
   const prompt = el('div', 'hud__prompt hidden', `
-    <div class="box">◉ HOLD <span class="key">[E]</span> — ACCESS <span data-prompt-name></span></div>
+    <div class="box">◉ HOLD <span class="key">[E]</span> — <span data-prompt-verb></span> <span data-prompt-name></span></div>
   `);
   node.appendChild(prompt);
 
-  const tickerText = '<span class="tag">◆ OBJECTIVE</span> — infiltrate the facility &nbsp;·&nbsp; recover all 5 intel caches &nbsp;·&nbsp; access the DOSSIER for extraction papers &nbsp;·&nbsp; open the WATCH [TAB] for navigation &nbsp;·&nbsp; move [WASD] &nbsp;·&nbsp; interact [E] &nbsp;·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+  const navHint = isTouchDevice() ? 'open the WATCH [◷] for navigation &nbsp;·&nbsp; drag to move / look &nbsp;·&nbsp; tap ◉ to interact' : 'open the WATCH [TAB] for navigation &nbsp;·&nbsp; move [WASD] &nbsp;·&nbsp; interact [E]';
+  const tickerText = `<span class="tag">◆ OBJECTIVE</span> — infiltrate the facility &nbsp;·&nbsp; recover all 5 intel caches &nbsp;·&nbsp; access the DOSSIER for extraction papers &nbsp;·&nbsp; ${navHint} &nbsp;·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
   const ticker = el('div', 'hud__ticker', `<div class="track">${tickerText}${tickerText}</div>`);
   node.appendChild(ticker);
 
-  const watchHint = el('div', 'hud__watch-hint', `◷ <span class="key">[TAB]</span> WATCH`);
-  node.appendChild(watchHint);
+  if (!isTouchDevice()) {
+    const watchHint = el('div', 'hud__watch-hint', `◷ <span class="key">[TAB]</span> WATCH`);
+    node.appendChild(watchHint);
+  }
 
   return {
     node,
@@ -119,21 +124,28 @@ function buildHud(game) {
       intel.querySelector('[data-visited]').textContent = game.objectivesVisited;
       intel.querySelector('[data-total]').textContent = game.objectivesTotal;
       intel.querySelector('[data-clearance]').textContent = CLEARANCE_LABELS[game.objectivesVisited];
+      intel.querySelector('[data-armed]').classList.toggle('hidden', !state.hasGun);
       const hasPrompt = !!(state.prompt && state.active);
       prompt.classList.toggle('hidden', !hasPrompt);
-      if (hasPrompt) prompt.querySelector('[data-prompt-name]').textContent = state.prompt.name;
+      if (hasPrompt) {
+        prompt.querySelector('[data-prompt-verb]').textContent = state.prompt.verb || 'ACCESS';
+        prompt.querySelector('[data-prompt-name]').textContent = state.prompt.name;
+      }
     },
   };
 }
 
 function buildBoot(game) {
+  const keysLine = isTouchDevice()
+    ? 'DRAG LEFT MOVE &nbsp; · &nbsp; DRAG RIGHT LOOK &nbsp; · &nbsp; ◉ INTERACT &nbsp; · &nbsp; ◷ WATCH'
+    : '[WASD] MOVE &nbsp; · &nbsp; [MOUSE] LOOK &nbsp; · &nbsp; [E] INTERACT &nbsp; · &nbsp; [TAB] WATCH &nbsp; · &nbsp; [ESC] PAUSE';
   const node = el('div', 'boot', `
     <div class="boot__eyebrow">CLASSIFIED // LEVEL 00 CLEARANCE</div>
     <div class="boot__title">FIELD&nbsp;OPERATIVE</div>
     <div class="boot__subtitle">P O R T F O L I O</div>
     <div class="boot__rule"></div>
-    <div class="boot__cta">▶ CLICK TO INSERT CARTRIDGE</div>
-    <div class="boot__keys">[WASD] MOVE &nbsp; · &nbsp; [MOUSE] LOOK &nbsp; · &nbsp; [E] INTERACT &nbsp; · &nbsp; [TAB] WATCH &nbsp; · &nbsp; [ESC] PAUSE</div>
+    <div class="boot__cta">▶ ${isTouchDevice() ? 'TAP' : 'CLICK'} TO INSERT CARTRIDGE</div>
+    <div class="boot__keys">${keysLine}</div>
     <div class="boot__err hidden" data-err></div>
   `);
   node.addEventListener('click', game.start);
@@ -149,10 +161,11 @@ function buildBoot(game) {
 }
 
 function buildPause(game) {
+  const hint = isTouchDevice() ? 'drag to move & look · tap ◷ for watch' : '[WASD] move · drag mouse to look · [TAB] watch';
   const node = el('div', 'pause hidden', `
     <div class="pause__title">PAUSED</div>
-    <div class="pause__cta">▶ CLICK TO RESUME</div>
-    <div class="pause__hint">[WASD] move · drag mouse to look · [TAB] watch</div>
+    <div class="pause__cta">▶ ${isTouchDevice() ? 'TAP' : 'CLICK'} TO RESUME</div>
+    <div class="pause__hint">${hint}</div>
   `);
   node.addEventListener('click', game.resume);
   return {
@@ -184,7 +197,8 @@ function buildWatch(game) {
 
   const body = el('div', 'watch__body');
   const tabs = el('div', 'watch__tabs');
-  const tabsClose = el('div', 'watch__tabs-close', '[TAB] close');
+  const tabsClose = el('button', 'watch__tabs-close', isTouchDevice() ? '✕ close' : '[TAB] close');
+  tabsClose.addEventListener('click', game.toggleWatch);
   const tabDefs = [['nav', '◇ NAV'], ['intel', '◆ INTEL'], ['dossier', '▤ DOSSIER'], ['comms', '✉ COMMS'], ['sys', '⚙ SYSTEM']];
   const tabButtons = tabDefs.map(([id, label]) => {
     const btn = el('button', 'watch__tab', label);

@@ -45,12 +45,12 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 /* ===== CRT overlay ===== */
 .crt-scanlines {
   position: absolute; inset: 0; pointer-events: none; z-index: 20;
-  background: repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0px, rgba(0,0,0,.28) 1px, transparent 2px, transparent 3px);
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,.2) 0px, rgba(0,0,0,.2) 1px, transparent 2px, transparent 3px);
   mix-blend-mode: multiply; animation: flick 6s infinite steps(1);
 }
 .crt-vignette {
   position: absolute; inset: 0; pointer-events: none; z-index: 21;
-  background: radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,.55) 100%);
+  background: radial-gradient(ellipse at center, transparent 58%, rgba(0,0,0,.4) 100%);
 }
 .crt-sweep {
   position: absolute; left: 0; right: 0; height: 120px; pointer-events: none; z-index: 22;
@@ -153,7 +153,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .watch__tabs { width: 150px; border-right: 1px solid var(--line3); padding: 12px 0; display: flex; flex-direction: column; gap: 2px; }
 .watch__tab { cursor: pointer; padding: 9px 18px; font-size: 12px; letter-spacing: .12em; border-left: 3px solid transparent; color: var(--muted); text-align: left; }
 .watch__tab.active { border-left-color: var(--teal); background: rgba(47,212,198,.1); color: var(--light); }
-.watch__tabs-close { margin-top: auto; padding: 12px 18px 0; color: var(--muted); font-size: 10px; }
+.watch__tabs-close { margin-top: auto; padding: 12px 18px 0; color: var(--muted); font-size: 10px; text-align: left; width: 100%; cursor: pointer; }
+.watch__tabs-close:hover { color: var(--teal); }
 .watch__content { flex: 1; padding: 18px 22px; font-size: 13px; line-height: 1.7; position: relative; overflow-y: auto; }
 .watch__section-title { color: var(--amber); letter-spacing: .16em; margin-bottom: 12px; }
 
@@ -242,6 +243,31 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .resume-info { flex: 1; min-width: 220px; }
 .resume-info .name { color: var(--light); font-family: var(--display); font-size: 20px; }
 .resume-info .meta { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+
+/* ===== touch controls ===== */
+.touch-ui { position: absolute; inset: 0; z-index: 31; }
+.touch-zone { position: absolute; top: 0; bottom: 0; touch-action: none; }
+.touch-zone.move { left: 0; width: 45%; }
+.touch-zone.look { right: 0; width: 55%; }
+
+.touch-joy-base {
+  position: absolute; width: 100px; height: 100px; margin-left: -50px; margin-top: -50px;
+  border-radius: 50%; background: rgba(20, 22, 26, .55); border: 1px solid rgba(47,212,198,.4);
+  pointer-events: none;
+}
+.touch-joy-knob {
+  position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin-left: -23px; margin-top: -23px;
+  border-radius: 50%; background: rgba(47,212,198,.35); border: 1px solid var(--teal);
+}
+
+.touch-btn {
+  position: absolute; border-radius: 50%; background: rgba(10,11,13,.6); border: 1px solid var(--teal);
+  color: var(--light); font-family: var(--mono); font-size: 12px; line-height: 1.15; text-align: center;
+  touch-action: none; pointer-events: auto;
+}
+.touch-btn--watch { right: 34px; bottom: 270px; width: 50px; height: 50px; font-size: 20px; color: var(--teal); }
+.touch-btn--interact { right: 34px; bottom: 190px; width: 66px; height: 66px; box-shadow: 0 0 14px rgba(47,212,198,.3); animation: pulse 1.6s infinite; }
+.touch-btn--fire { right: 34px; bottom: 100px; width: 72px; height: 72px; border-color: var(--amber); color: var(--amber); font-size: 26px; }
 
 /* ===== misc ===== */
 .hidden { display: none !important; }

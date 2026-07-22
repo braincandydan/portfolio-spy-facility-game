@@ -127,7 +127,7 @@ function buildHud(game) {
   const navHint = touch
     ? 'stick to move · tap the prompt to use · tap INTEL for watch'
     : 'stick or arrows/WASD to move · [Z] fire · [E] / tap prompt to use · [C] swap · [TAB] watch';
-  const tickerText = `<span class="tag">◆ OBJECTIVE</span> — talk to the alien → take the keycard dossier → hangar projects → vent to SIGINT → master key → rec room &nbsp;·&nbsp; follow NEXT ▸ &nbsp;·&nbsp; ☕ coffee keeps you sharp &nbsp;·&nbsp; ${navHint} &nbsp;·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
+  const tickerText = `<span class="tag">◆ OBJECTIVE</span> — talk to the alien → read the dossier → hangar projects → vent to SIGINT → access the archive → rec room &nbsp;·&nbsp; follow NEXT ▸ &nbsp;·&nbsp; ☕ coffee keeps you sharp &nbsp;·&nbsp; ${navHint} &nbsp;·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
   const ticker = el('div', 'hud__ticker', `<div class="track">${tickerText}${tickerText}</div>`);
   node.appendChild(ticker);
 
@@ -455,7 +455,7 @@ function renderPanelBody(panelId) {
   if (panelId === 'skills') {
     return `
       <div class="panel__heading">SIGINT — DECRYPTED CAPABILITIES</div>
-      <div class="panel__sub">Digital intercepts. Replace with your real stack.</div>
+      <div class="panel__sub">Digital intercepts. Accessing the archive hands you the master key.</div>
       <div class="skill-grid">
         ${skills.map((k) => `
           <div class="skill">
@@ -469,7 +469,7 @@ function renderPanelBody(panelId) {
   if (panelId === 'about') {
     return `
       <div class="panel__heading">PERSONNEL FILE — EYES ONLY</div>
-      <div class="panel__sub">Recovered with the Hangar-1 keycard. Dossier + clearance in one grab.</div>
+      <div class="panel__sub">Reading the file logs you Hangar-1 clearance — keycard included.</div>
       <div class="about-layout">
         <div class="about-photo">▣ PHOTO</div>
         <div class="about-bio">

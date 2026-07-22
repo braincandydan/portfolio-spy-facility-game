@@ -534,6 +534,9 @@ export class Game {
     this._mark(id);
     // Viewing projects unseals the maintenance vent into SIGINT
     if (id === 'projects') this._openVent();
+    // Reading the dossier / accessing the archive hands over the matching key
+    if (id === 'about') this.grantItem(ITEM_IDS.KEYCARD);
+    if (id === 'skills') this.grantItem(ITEM_IDS.MASTERKEY);
     this.setState({ panel: id, dialogue: null, active: false });
   };
 
@@ -576,7 +579,10 @@ export class Game {
     }
   };
 
-  pickupItem = (id) => {
+  // Grants an item regardless of whether it has a world pickup mesh — used both
+  // for physical pickups (camera, pistol) and for items handed over by reading
+  // a document / accessing a terminal (keycard, master key).
+  grantItem = (id) => {
     if (this.state.inventory.includes(id)) return;
     const pickup = (this._pickups || []).find((p) => p.def.id === id);
     if (pickup?.mesh) {
@@ -591,7 +597,7 @@ export class Game {
     this.audio.blip(820);
     setTimeout(() => this.audio.blip(1200), 90);
 
-    // Equip newly picked item
+    // Equip newly granted item
     this.setState({
       inventory,
       activeItem: id,
@@ -602,8 +608,6 @@ export class Game {
     if (id === ITEM_IDS.KEYCARD) {
       this._doors?.unlockByKey(ITEM_IDS.KEYCARD);
       this.audio.blip(990);
-      // Keycard sits on the about-me dossier — open it so the player reads both
-      setTimeout(() => this.openPanel('about'), 220);
     }
     if (id === ITEM_IDS.MASTERKEY) {
       this._doors?.unlockByKey(ITEM_IDS.MASTERKEY);
@@ -611,6 +615,8 @@ export class Game {
       setTimeout(() => this.audio.blip(660), 120);
     }
   };
+
+  pickupItem = (id) => this.grantItem(id);
 
   _openVent() {
     if (this._ventOpened) return;

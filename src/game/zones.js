@@ -2,10 +2,10 @@
 // Extend this to add rooms — closed gates carve holes out of walkability.
 //
 // Progression: everything starts locked except the south wing (XENO-LAB).
-//   1. Talk to the alien (CONTACT) — it points you at the keycard.
-//   2. Keycard + dossier on the table (ABOUT) — unlocks the north wing.
+//   1. Talk to the alien (CONTACT) — it points you at the dossier.
+//   2. Read the dossier (ABOUT) — hands over the keycard, unlocks the north wing.
 //   3. Saucer terminal in Hangar-1 (PROJECTS) — unseals the maintenance vent.
-//   4. Crawl the vent into SIGINT (SKILLS) — grab the MASTER KEY there.
+//   4. Crawl the vent into SIGINT (SKILLS) — accessing the archive hands over the MASTER KEY.
 //   5. Master key unlocks everything, incl. the west REC ROOM (arcade).
 //   RESUME (data core) sits in the atrium — always reachable.
 
@@ -47,9 +47,9 @@ export const ZONE_NAMES = {
 
 export const ZONE_SUBS = {
   projects: 'north · hangar craft / my projects',
-  skills: 'east · sigint (via the vent)',
+  skills: 'east · sigint (via the vent) · grants the master key',
   contact: 'south · talk to the alien',
-  about: 'xeno-lab table · dossier + keycard',
+  about: 'xeno-lab table · reading it grants the keycard',
   resume: 'atrium · my resume',
 };
 

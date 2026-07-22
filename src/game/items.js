@@ -16,22 +16,12 @@ export const ITEM_IDS = {
   CAMERA: 'camera',
 };
 
-/** Pickup spawn points in the facility. */
+/**
+ * Pickup spawn points in the facility. KEYCARD and MASTERKEY are granted
+ * directly by reading the dossier / accessing the SIGINT archive (see
+ * Game.js openPanel) rather than being walked-up-to world pickups.
+ */
 export const PICKUP_DEFS = [
-  {
-    id: ITEM_IDS.KEYCARD,
-    name: 'KEYCARD',
-    verb: 'TAKE',
-    // XENO-LAB docs table — unlocks Hangar-1
-    position: { x: 4.5, y: 1.35, z: 29.5 },
-  },
-  {
-    id: ITEM_IDS.MASTERKEY,
-    name: 'MASTER KEY',
-    verb: 'TAKE',
-    // SIGINT console bank — unlocks east exit + west REC ROOM
-    position: { x: 34, y: 1.1, z: 4 },
-  },
   {
     id: ITEM_IDS.CAMERA,
     name: 'SPY CAM',
@@ -187,18 +177,6 @@ export function buildItems(THREE, scene, assets = null) {
       } else {
         mesh = buildPickupGun(THREE);
       }
-    } else if (def.id === ITEM_IDS.KEYCARD) {
-      const fromAsset = assets?.get('keycard')?.clone() || buildProceduralKeycard(THREE);
-      fromAsset.scale.setScalar(fromAsset.scale.x === 1 ? 1.6 : fromAsset.scale.x);
-      addBobRing(THREE, fromAsset, AMBER);
-      fromAsset.position.set(def.position.x, def.position.y, def.position.z);
-      mesh = fromAsset;
-    } else if (def.id === ITEM_IDS.MASTERKEY) {
-      const fromAsset = buildProceduralMasterkey(THREE);
-      fromAsset.scale.setScalar(1.5);
-      addBobRing(THREE, fromAsset, AMBER);
-      fromAsset.position.set(def.position.x, def.position.y, def.position.z);
-      mesh = fromAsset;
     } else if (def.id === ITEM_IDS.CAMERA) {
       const fromAsset = assets?.get('camera')?.clone() || buildProceduralCamera(THREE);
       fromAsset.scale.setScalar(fromAsset.scale.x === 1 ? 1.8 : fromAsset.scale.x);

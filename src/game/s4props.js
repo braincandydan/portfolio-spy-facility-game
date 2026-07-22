@@ -154,8 +154,9 @@ function makeFolderTexture(THREE, stamp = 'TOP SECRET') {
 }
 
 /**
- * Reading table piled with classified personnel documents — the keycard pickup
- * floats above it (see items.js). Placed in the XENO-LAB next to the cell.
+ * Reading table piled with classified personnel documents — reading the dossier
+ * (see Game.js openPanel) hands over the keycard directly. Placed in the
+ * XENO-LAB next to the cell.
  */
 export function buildDocsTable(THREE, scene, position = { x: 4.5, z: 29.5 }) {
   const table = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.0, 1.5), lambert(THREE, 0x33291f));

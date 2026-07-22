@@ -278,15 +278,15 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 /* ===== GoldenEye / N64 stick controls (all devices) ===== */
 .n64-ui { position: absolute; inset: 0; z-index: 31; pointer-events: none; }
 
-/* Stick bottom-left so the center prompt stays tappable. */
+/* Stick sits bottom-center like the middle prong of an N64 controller. */
 .n64-stick-zone {
-  position: absolute; left: 0; bottom: 0;
-  width: 220px; height: 220px;
+  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+  width: 300px; height: 230px;
   pointer-events: auto; touch-action: none; cursor: grab;
 }
 .n64-stick-zone:active { cursor: grabbing; }
 .n64-stick {
-  position: absolute; left: 28px; bottom: 36px;
+  position: absolute; left: 50%; bottom: 54px; transform: translateX(-50%);
   width: 132px; height: 132px;
   pointer-events: none; color: var(--teal);
   background: rgba(10,11,13,.55); border: 1px solid rgba(47,212,198,.35);
@@ -384,7 +384,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .hud__prompt .box { font-size: 13px; padding: 12px 16px; }
   .hud__ticker { left: 0; right: 0; bottom: 0; border-bottom: none; }
   .n64-stick-zone { width: 190px; height: 190px; }
-  .n64-stick { width: 116px; height: 116px; left: 18px; bottom: 48px; }
+  .n64-stick { width: 116px; height: 116px; bottom: 48px; }
   .n64-btn--fire { right: 12px; bottom: 96px; width: 68px; height: 68px; }
   .n64-btn--interact { right: 20px; bottom: 182px; width: 58px; height: 58px; }
   .n64-btn--cycle { right: 92px; bottom: 152px; width: 48px; height: 48px; }

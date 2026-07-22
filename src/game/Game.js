@@ -20,7 +20,8 @@ import {
 const RECOIL_KICK = 0.05;
 const RECOIL_DECAY = 10;
 const PROXIMITY_RADIUS = 4;
-const AUTO_AIM_CONE = 0.28; // rad — hip-fire snaps to shootable targets
+const AUTO_AIM_CONE = 0.09; // rad — hip-fire snaps to shootable targets
+const GUIDE_AIM_ENABLED = false; // soft camera auto-pull toward interactables — disabled, fights manual aim
 const GUIDE_AIM_RANGE = 12; // soft look-at pull toward nearby interactables
 const GUIDE_AIM_RATE = 1.8; // rad/s max correction
 
@@ -67,7 +68,6 @@ export class Game {
       lockMsg: null,
       dialogue: null, // { speaker, lines, idx }
       caffeine: 100,
-      stickWear: 0, // 0..100, fed by the joystick UI
       guide: null, // { name, plain, arrow, dist } → next unvisited objective
       err: null,
     };
@@ -309,14 +309,9 @@ export class Game {
     if (rounded !== this.state.caffeine) this.setState({ caffeine: rounded });
   }
 
-  /** Joystick UI reports spring wear here (0..1). */
-  setStickWear = (wear) => {
-    const v = Math.round(wear * 20) * 5; // 5% steps to avoid re-render spam
-    if (v !== this.state.stickWear) this.setState({ stickWear: v });
-  };
-
   /** Soft camera pull toward nearby interactables so the stick "finds" objects. */
   _updateGuideAim(dt, stick) {
+    if (!GUIDE_AIM_ENABLED) return;
     // Don't fight a strong turn input — only nudge when the player is mostly walking.
     if (Math.abs(stick.turn) > 0.45) return;
 
@@ -673,7 +668,7 @@ export class Game {
       if (!t.parent) continue;
       const dir = t.getWorldPosition(new THREE.Vector3()).sub(camPos);
       const dist = dir.length();
-      if (dist > 45) continue;
+      if (dist > 15) continue;
       dir.normalize();
       const ang = fwd.angleTo(dir);
       if (ang < bestAng) { bestAng = ang; best = { mesh: t, dir }; }

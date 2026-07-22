@@ -55,12 +55,11 @@ export function mountN64Controls(root, game) {
 
   root.appendChild(wrap);
 
-  // ---- stick: pointer lock (mouse), spring snap-back, and N64 wear ----
+  // ---- stick: pointer lock (mouse) and spring snap-back ----
   let stickPointerId = null;
   let held = false;
   let vx = 0, vy = 0;
   let svx = 0, svy = 0;
-  let wear = 0;
 
   const clampStick = () => {
     const m = Math.hypot(vx, vy);
@@ -68,13 +67,8 @@ export function mountN64Controls(root, game) {
   };
 
   const applyStick = () => {
-    const authority = 1 - 0.35 * wear;
-    game.setJoystick((vx / JOY_RADIUS) * authority, (-vy / JOY_RADIUS) * authority);
+    game.setJoystick(vx / JOY_RADIUS, -vy / JOY_RADIUS);
     knob.style.transform = `translate(calc(-50% + ${vx}px), calc(-50% + ${vy}px))`;
-    const hue = 172 - wear * 140;
-    knob.style.background = `hsla(${hue}, 70%, 50%, .4)`;
-    knob.style.borderColor = `hsl(${hue}, 72%, 55%)`;
-    knob.style.boxShadow = `0 0 10px hsla(${hue}, 70%, 50%, .35)`;
   };
 
   const isLocked = () => document.pointerLockElement === stickZone;
@@ -134,26 +128,18 @@ export function mountN64Controls(root, game) {
     const dt = Math.min(0.05, (now - lastTick) / 1000);
     lastTick = now;
 
-    const deflection = Math.hypot(vx, vy) / JOY_RADIUS;
-    if (held) {
-      wear = Math.min(1, wear + deflection * dt / 45);
-      applyStick();
-    } else {
-      wear = Math.max(0, wear - dt / 15);
-      if (vx !== 0 || vy !== 0 || svx !== 0 || svy !== 0) {
-        const k = 200 - 150 * wear;
-        const c = 16 - 12 * wear;
-        svx += (-k * vx - c * svx) * dt;
-        svy += (-k * vy - c * svy) * dt;
-        vx += svx * dt;
-        vy += svy * dt;
-        if (Math.hypot(vx, vy) < 0.6 && Math.hypot(svx, svy) < 4) {
-          vx = 0; vy = 0; svx = 0; svy = 0;
-        }
-        applyStick();
+    if (!held && (vx !== 0 || vy !== 0 || svx !== 0 || svy !== 0)) {
+      const k = 200;
+      const c = 16;
+      svx += (-k * vx - c * svx) * dt;
+      svy += (-k * vy - c * svy) * dt;
+      vx += svx * dt;
+      vy += svy * dt;
+      if (Math.hypot(vx, vy) < 0.6 && Math.hypot(svx, svy) < 4) {
+        vx = 0; vy = 0; svx = 0; svy = 0;
       }
+      applyStick();
     }
-    game.setStickWear?.(wear);
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);

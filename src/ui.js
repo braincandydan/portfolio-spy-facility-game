@@ -94,10 +94,6 @@ function buildHud(game) {
       <div class="row"><span>CAFFEINE</span><span data-caff-val></span></div>
       <div class="bar"><div class="fill amber" data-caff-fill></div></div>
     </div>
-    <div class="hud__stat">
-      <div class="row"><span>STICK SPRING</span><span data-stick-val></span></div>
-      <div class="bar"><div class="fill teal" data-stick-fill></div></div>
-    </div>
   `);
   node.appendChild(stats);
 
@@ -154,15 +150,12 @@ function buildHud(game) {
         promptNode.querySelector('[data-prompt-name]').textContent = state.prompt.name;
       }
 
-      // caffeine + stick wear meters
+      // caffeine meter
       const caff = state.caffeine ?? 100;
       stats.querySelector('[data-caff-val]').textContent = caff <= 30 ? `${caff} ▼ LOW` : caff;
       const caffFill = stats.querySelector('[data-caff-fill]');
       caffFill.style.width = `${caff}%`;
       caffFill.classList.toggle('pulse', caff <= 30);
-      const spring = 100 - (state.stickWear ?? 0);
-      stats.querySelector('[data-stick-val]').textContent = spring <= 40 ? `${spring} ▼ SPONGY` : spring;
-      stats.querySelector('[data-stick-fill]').style.width = `${spring}%`;
 
       // objective guide (always visible during gameplay — it's the main breadcrumb)
       const showGuide = !!(state.guide && state.active);

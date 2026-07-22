@@ -169,7 +169,7 @@ export function buildItems(THREE, scene, assets = null) {
     if (def.id === ITEM_IDS.PISTOL) {
       const fromAsset = assets?.get('pistol')?.clone();
       if (fromAsset) {
-        fromAsset.scale.setScalar(3.4);
+        fromAsset.scale.multiplyScalar(3.4);
         fromAsset.rotation.z = Math.PI / 10;
         addBobRing(THREE, fromAsset, AMBER);
         fromAsset.position.set(def.position.x, def.position.y, def.position.z);
@@ -196,7 +196,7 @@ export function buildItems(THREE, scene, assets = null) {
     const fromAsset = assets?.get('pistol')?.clone();
     if (fromAsset) {
       fromAsset.position.set(0.32, -0.3, -0.55);
-      fromAsset.rotation.y = Math.PI + 0.06;
+      fromAsset.rotation.y += Math.PI + 0.06;
       fromAsset.visible = false;
       const muzzle = new THREE.Object3D();
       muzzle.position.set(0, 0.05, -0.3);

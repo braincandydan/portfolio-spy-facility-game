@@ -58,6 +58,7 @@ In Blender's material:
    - `crate.glb`
    - `keycard.glb`
    - `camera.glb`
+   - `spaceship.glb`
 
 ---
 
@@ -71,6 +72,7 @@ portfolio-spy-facility-game/
       crate.glb
       keycard.glb
       camera.glb
+      spaceship.glb
     textures/         ← only if you need standalone images
 ```
 

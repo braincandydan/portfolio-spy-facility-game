@@ -9,7 +9,9 @@ const MANIFEST = {
   pistol: {
     url: 'models/pistol.glb',
     // scale applied to loaded GLB root
-    scale: 1,
+    scale: 0.05,
+    // facing correction, radians — barrel authored along +X, game wants -Z forward
+    rotationY: Math.PI / 2,
   },
   crate: {
     url: 'models/crate.glb',
@@ -22,6 +24,16 @@ const MANIFEST = {
   camera: {
     url: 'models/camera.glb',
     scale: 1,
+  },
+  spaceship: {
+    url: 'models/spaceship.glb',
+    scale: 0.65,
+  },
+  alien: {
+    url: 'models/alien.glb',
+    scale: 1,
+    // facing correction, radians — model's authored "forward" doesn't match the game's -Z forward
+    rotationY: Math.PI,
   },
 };
 
@@ -54,6 +66,7 @@ export async function loadAssets(THREE, fallbacks = {}) {
         root = gltf.scene;
         applyN64Filter(THREE, root);
         if (entry.scale && entry.scale !== 1) root.scale.multiplyScalar(entry.scale);
+        if (entry.rotationY) root.rotation.y += entry.rotationY;
       } catch {
         root = null;
       }

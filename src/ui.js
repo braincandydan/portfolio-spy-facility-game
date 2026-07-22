@@ -169,6 +169,58 @@ function buildHud(game) {
   };
 }
 
+const DECRYPT_CHARSET = '!<>-_\\/[]{}=+*^?#$%01';
+
+function decryptText(node, finalText, { duration = 1500, frameMs = 45 } = {}) {
+  const chars = finalText.split('');
+  node.innerHTML = chars
+    .map((c) => (c === ' ' ? '<span class="ch ch--space">&nbsp;</span>' : '<span class="ch"></span>'))
+    .join('') + '<span class="ch-cursor"></span>';
+  const spans = node.querySelectorAll('.ch');
+  const cursor = node.querySelector('.ch-cursor');
+
+  const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (reduceMotion) {
+    spans.forEach((span, i) => {
+      if (chars[i] === ' ') return;
+      span.textContent = chars[i];
+      span.classList.add('locked');
+    });
+    cursor.remove();
+    return;
+  }
+
+  const totalFrames = Math.ceil(duration / frameMs);
+  // stagger reveal left-to-right, with a little jitter so it doesn't lock in a mechanical straight line
+  const lockFrame = chars.map((_, i) => {
+    const base = totalFrames * 0.35 + (i / Math.max(chars.length - 1, 1)) * totalFrames * 0.55;
+    return Math.round(base + (Math.random() - 0.5) * totalFrames * 0.15);
+  });
+
+  let frame = 0;
+  const timer = setInterval(() => {
+    frame++;
+    let allLocked = true;
+    chars.forEach((c, i) => {
+      if (c === ' ') return;
+      const span = spans[i];
+      if (span.classList.contains('locked')) return;
+      if (frame >= lockFrame[i]) {
+        span.textContent = c;
+        span.classList.add('locked');
+      } else {
+        span.textContent = DECRYPT_CHARSET[Math.floor(Math.random() * DECRYPT_CHARSET.length)];
+        allLocked = false;
+      }
+    });
+    if (allLocked) {
+      clearInterval(timer);
+      cursor.remove();
+    }
+  }, frameMs);
+  return () => clearInterval(timer);
+}
+
 function buildBoot(game) {
   const touch = isTouchDevice();
   const keysLine = touch
@@ -176,7 +228,7 @@ function buildBoot(game) {
     : 'STICK / ARROWS / WASD MOVE &nbsp; · &nbsp; [Z] FIRE &nbsp; · &nbsp; [E] / CLICK PROMPT TO USE &nbsp; · &nbsp; [C] SWAP &nbsp; · &nbsp; [TAB] WATCH &nbsp; · &nbsp; [ESC] PAUSE';
   const node = el('div', 'boot', `
     <div class="boot__eyebrow">CLASSIFIED // LEVEL 00 CLEARANCE</div>
-    <div class="boot__title">FIELD&nbsp;OPERATIVE</div>
+    <div class="boot__title" data-title></div>
     <div class="boot__subtitle">P O R T F O L I O</div>
     <div class="boot__rule"></div>
     <div class="boot__cta">▶ ${touch ? 'TAP' : 'CLICK'} TO INSERT CARTRIDGE</div>
@@ -184,6 +236,7 @@ function buildBoot(game) {
     <div class="boot__err hidden" data-err></div>
   `);
   node.addEventListener('click', game.start);
+  decryptText(node.querySelector('[data-title]'), 'DAN DONNELLY');
   return {
     node,
     update(state) {

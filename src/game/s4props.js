@@ -8,44 +8,59 @@ function lambert(THREE, c) {
 
 // ---------- Hangar-1: the saucer ----------
 
-export function buildSaucer(THREE, scene, position = { x: 0, z: -32 }) {
+export function buildSaucer(THREE, scene, position = { x: 0, z: -32 }, assets = null) {
   const group = new THREE.Group();
   group.position.set(position.x, 0, position.z);
 
   const hullMat = new THREE.MeshLambertMaterial({ color: 0x8a919c, flatShading: true });
   const darkMat = lambert(THREE, 0x3a4048);
 
-  // Lower hull (inverted shallow cone)
-  const lower = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 1.1, 0.8, 18), hullMat);
-  lower.position.y = 2.0;
-  group.add(lower);
+  const hullModel = assets?.get('spaceship')?.clone();
+  const hullParts = [];
+  let portholes = [];
 
-  // Upper hull
-  const upper = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 3.1, 0.7, 18), hullMat);
-  upper.position.y = 2.75;
-  group.add(upper);
+  if (hullModel) {
+    hullModel.position.y = 2.4;
+    group.add(hullModel);
+    hullParts.push(hullModel);
+  } else {
+    // Lower hull (inverted shallow cone)
+    const lower = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 1.1, 0.8, 18), hullMat);
+    lower.position.y = 2.0;
+    group.add(lower);
+    hullParts.push(lower);
 
-  // Dome
-  const dome = new THREE.Mesh(
-    new THREE.SphereGeometry(1.1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2),
-    darkMat,
-  );
-  dome.position.y = 3.1;
-  group.add(dome);
+    // Upper hull
+    const upper = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 3.1, 0.7, 18), hullMat);
+    upper.position.y = 2.75;
+    group.add(upper);
+    hullParts.push(upper);
 
-  // Rim band
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(3.1, 0.14, 8, 24), darkMat);
-  rim.rotation.x = Math.PI / 2;
-  rim.position.y = 2.4;
-  group.add(rim);
+    // Dome
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(1.1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+      darkMat,
+    );
+    dome.position.y = 3.1;
+    group.add(dome);
+    hullParts.push(dome);
 
-  // Porthole lights around the rim
-  const portMat = new THREE.MeshBasicMaterial({ color: 0xffb000 });
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2;
-    const port = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 6), portMat);
-    port.position.set(Math.cos(a) * 2.6, 2.75, Math.sin(a) * 2.6);
-    group.add(port);
+    // Rim band
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(3.1, 0.14, 8, 24), darkMat);
+    rim.rotation.x = Math.PI / 2;
+    rim.position.y = 2.4;
+    group.add(rim);
+    hullParts.push(rim);
+
+    // Porthole lights around the rim
+    const portMat = new THREE.MeshBasicMaterial({ color: 0xffb000 });
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const port = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 6), portMat);
+      port.position.set(Math.cos(a) * 2.6, 2.75, Math.sin(a) * 2.6);
+      group.add(port);
+      portholes.push(port);
+    }
   }
 
   // Anti-gravity glow ring underneath
@@ -85,12 +100,10 @@ export function buildSaucer(THREE, scene, position = { x: 0, z: -32 }) {
 
   const saucerBody = new THREE.Group();
   // move hull parts into a sub-group so the hover animation doesn't move pylons
-  for (const m of [lower, upper, dome, rim]) saucerBody.add(m);
+  for (const m of hullParts) saucerBody.add(m);
   group.add(saucerBody);
-  // portholes ride with the hull
-  group.children
-    .filter((c) => c.geometry?.type === 'SphereGeometry' && c.material === portMat)
-    .forEach((p) => saucerBody.add(p));
+  // portholes ride with the hull (procedural fallback only)
+  for (const p of portholes) saucerBody.add(p);
 
   return {
     group,

@@ -417,7 +417,7 @@ export function buildLevel(THREE, scene, assets = null) {
   buildHazardStrips(THREE, scene, DOOR_DEFS);
 
   // HANGAR-1 (N): the recovered saucer + anti-grav pylons + element 115
-  const saucer = buildSaucer(THREE, scene, { x: 0, z: -32 });
+  const saucer = buildSaucer(THREE, scene, { x: 0, z: -32 }, assets);
   buildE115Crates(THREE, scene, assets);
   const mat = (col) => new THREE.MeshLambertMaterial({ color: col, flatShading: true });
   // Craft-analysis terminal (the intel interactable sits here)
@@ -445,7 +445,7 @@ export function buildLevel(THREE, scene, assets = null) {
   const sigint = buildSigintScreens(THREE, scene);
 
   // XENO-LAB (S): containment cell + docs table (keycard / about me)
-  const containment = buildContainment(THREE, scene, { x: 0, z: 32 });
+  const containment = buildContainment(THREE, scene, { x: 0, z: 32 }, assets);
   buildDocsTable(THREE, scene, { x: 4.5, z: 29.5 });
 
   // REC ROOM (W): arcade + couch + shooting range (unlocked by master key)

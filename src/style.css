@@ -139,7 +139,12 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   align-items: center; justify-content: center; cursor: pointer; text-align: center; animation: boot .6s;
 }
 .boot__eyebrow { color: var(--muted); font-size: 12px; letter-spacing: .5em; margin-bottom: 18px; }
-.boot__title { font-family: var(--display); font-weight: 700; font-size: clamp(40px, 7vw, 86px); color: var(--light); line-height: .95; letter-spacing: .02em; text-shadow: 0 0 24px rgba(47,212,198,.4); }
+.boot__title { font-family: var(--display); font-weight: 700; font-size: clamp(40px, 7vw, 86px); color: var(--light); line-height: .95; }
+.boot__title .ch { display: inline-block; width: .62em; text-align: center; font-family: var(--mono); font-weight: 400; color: var(--teal); opacity: .5; }
+.boot__title .ch--space { width: .36em; }
+.boot__title .ch.locked { font-family: var(--display); font-weight: 700; color: var(--light); opacity: 1; text-shadow: 0 0 24px rgba(47,212,198,.4); animation: chLock .3s ease; }
+.boot__title .ch-cursor { display: inline-block; width: .5ch; height: .8em; margin-left: 4px; background: var(--teal); vertical-align: -.08em; animation: pulse .5s steps(1) infinite; }
+@keyframes chLock { 0% { opacity: .4; transform: translateY(-4px); text-shadow: 0 0 16px var(--teal); } 55% { opacity: 1; text-shadow: 0 0 34px rgba(47,212,198,.7); } 100% { opacity: 1; transform: translateY(0); text-shadow: 0 0 24px rgba(47,212,198,.4); } }
 .boot__subtitle { font-family: var(--display); font-weight: 400; font-size: clamp(18px, 2.6vw, 30px); color: var(--teal); letter-spacing: .42em; margin-top: 2px; }
 .boot__rule { width: min(520px, 74vw); height: 1px; background: linear-gradient(90deg, transparent, var(--teal), transparent); margin: 26px 0; }
 .boot__cta { border: 1px solid var(--teal); padding: 12px 30px; color: var(--light); font-size: 15px; letter-spacing: .12em; animation: pulse 1.8s infinite; }

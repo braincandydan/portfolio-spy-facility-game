@@ -79,7 +79,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .hud__intel .value .total { color: var(--muted); font-size: 16px; }
 .hud__intel .clearance { color: var(--muted); font-size: 10px; margin-top: 2px; }
 
-.hud__stats { position: absolute; bottom: 64px; left: 26px; display: flex; flex-direction: column; gap: 7px; width: 190px; }
+/* Stats live under the sector readout (top-left) so the bottom stays clear for controls. */
+.hud__stats { position: absolute; top: 108px; left: 26px; display: flex; flex-direction: column; gap: 7px; width: 170px; }
 .hud__stat .row { display: flex; justify-content: space-between; color: var(--muted2); font-size: 10px; }
 .hud__stat .bar { height: 6px; background: #1c1f25; border: 1px solid #33373f; margin-top: 2px; }
 .hud__stat .fill { height: 100%; }
@@ -87,7 +88,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .hud__stat .fill.amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
 .hud__stat .fill.pulse { animation: pulse 2.4s infinite; }
 
-.hud__prompt { position: absolute; bottom: 130px; left: 50%; transform: translateX(-50%); text-align: center; }
+/* Prompt floats just below the crosshair — clear of the stick and button clusters. */
+.hud__prompt { position: absolute; top: 58%; left: 50%; transform: translateX(-50%); text-align: center; }
 .hud__prompt .box {
   display: inline-block; border: 1px solid var(--teal); background: rgba(10,11,13,.72); padding: 8px 16px;
   color: var(--light); font-size: 14px; letter-spacing: .08em; box-shadow: 0 0 14px rgba(47,212,198,.25); animation: pulse 1.6s infinite;
@@ -247,13 +249,16 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 /* ===== GoldenEye / N64 stick controls (all devices) ===== */
 .n64-ui { position: absolute; inset: 0; z-index: 31; pointer-events: none; }
 
+/* Stick sits bottom-center like the middle prong of an N64 controller. */
 .n64-stick-zone {
-  position: absolute; left: 0; bottom: 0; width: 280px; height: 260px;
+  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+  width: 300px; height: 230px;
   pointer-events: auto; touch-action: none; cursor: grab;
 }
 .n64-stick-zone:active { cursor: grabbing; }
 .n64-stick {
-  position: absolute; left: 36px; bottom: 48px; width: 140px; height: 140px;
+  position: absolute; left: 50%; bottom: 54px; transform: translateX(-50%);
+  width: 132px; height: 132px;
   pointer-events: none; color: var(--teal);
   background: rgba(10,11,13,.55); border: 1px solid rgba(47,212,198,.35);
   border-radius: 8px;
@@ -274,14 +279,18 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .n64-btn span { display: block; font-size: 9px; color: var(--muted2); margin-top: 2px; }
 .n64-btn.pressed { background: rgba(47,212,198,.25); transform: scale(.96); }
-.n64-btn--watch { right: 28px; bottom: 300px; width: 48px; height: 48px; font-size: 18px; color: var(--teal); }
-.n64-btn--cycle { right: 100px; bottom: 210px; width: 56px; height: 56px; border-color: var(--amber); color: var(--amber); }
-.n64-btn--interact { right: 28px; bottom: 210px; width: 62px; height: 62px; box-shadow: 0 0 14px rgba(47,212,198,.3); animation: pulse 1.6s infinite; }
-.n64-btn--aim { right: 100px; bottom: 100px; width: 64px; height: 64px; border-color: #8ab4ff; color: #8ab4ff; }
-.n64-btn--fire { right: 28px; bottom: 90px; width: 74px; height: 74px; border-color: var(--amber); color: var(--amber); font-size: 16px; }
+
+/* Right-thumb arc: everything reachable one-handed from the bottom-right corner.
+   FIRE is the anchor (biggest, corner), AIM inward-left, USE above, SWAP inner. */
+.n64-btn--fire { right: 16px; bottom: 86px; width: 76px; height: 76px; border-color: var(--amber); color: var(--amber); font-size: 16px; }
+.n64-btn--aim { right: 98px; bottom: 62px; width: 60px; height: 60px; border-color: #8ab4ff; color: #8ab4ff; }
+.n64-btn--aim.pressed { background: rgba(138,180,255,.25); box-shadow: 0 0 14px rgba(138,180,255,.45); }
+.n64-btn--interact { right: 26px; bottom: 182px; width: 62px; height: 62px; box-shadow: 0 0 14px rgba(47,212,198,.3); animation: pulse 1.6s infinite; }
+.n64-btn--cycle { right: 106px; bottom: 152px; width: 52px; height: 52px; border-color: var(--amber); color: var(--amber); }
+.n64-btn--watch { right: 22px; top: 130px; width: 46px; height: 46px; font-size: 17px; color: var(--teal); }
 
 .n64-item-label {
-  position: absolute; right: 28px; bottom: 52px; pointer-events: none;
+  position: absolute; right: 18px; bottom: 42px; pointer-events: none;
   font-size: 11px; letter-spacing: .14em; color: var(--amber);
   text-shadow: 0 0 8px rgba(255,176,0,.4);
 }
@@ -335,8 +344,23 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .hidden { display: none !important; }
 
 @media (max-width: 640px) {
-  .hud__stats { width: 150px; }
-  .hud__sector .value { font-size: 22px; }
+  .hud { padding: 14px; font-size: 12px; }
+  .hud__sector { top: 14px; left: 14px; }
+  .hud__sector .value { font-size: 20px; }
+  .hud__intel { top: 14px; right: 14px; }
+  .hud__intel .value { font-size: 20px; }
+  .hud__stats { top: 92px; left: 14px; width: 128px; gap: 5px; }
+  .hud__ticker { left: 0; right: 0; bottom: 0; border-bottom: none; }
+  .n64-stick-zone { width: 240px; height: 210px; }
+  .n64-stick { width: 116px; height: 116px; bottom: 64px; }
+  .n64-btn--fire { right: 12px; bottom: 96px; width: 68px; height: 68px; }
+  .n64-btn--aim { right: 86px; bottom: 70px; width: 54px; height: 54px; }
+  .n64-btn--interact { right: 20px; bottom: 182px; width: 58px; height: 58px; }
+  .n64-btn--cycle { right: 92px; bottom: 152px; width: 48px; height: 48px; }
+  .n64-btn--watch { top: 96px; right: 14px; width: 42px; height: 42px; }
+  .n64-item-label { right: 14px; bottom: 48px; font-size: 10px; }
+  .dialogue { padding-bottom: 210px; }
+  .dialogue__line { font-size: 13px; }
   .watch__bezel { padding: 10px; }
   .watch__tabs { width: 110px; }
 }

@@ -47,7 +47,7 @@ export function mountN64Controls(root, game) {
   const watchBtn = el('button', 'n64-btn n64-btn--watch', '◷');
   const cycleBtn = el('button', 'n64-btn n64-btn--cycle hidden', 'C<br><span>SWAP</span>');
   const interactBtn = el('button', 'n64-btn n64-btn--interact hidden', 'E<br><span>USE</span>');
-  const aimBtn = el('button', 'n64-btn n64-btn--aim', 'R<br><span>AIM</span>');
+  const aimBtn = el('button', 'n64-btn n64-btn--aim', 'R<br><span>AIM</span>'); // toggles
   const fireBtn = el('button', 'n64-btn n64-btn--fire', 'Z<br><span>FIRE</span>');
 
   wrap.appendChild(watchBtn);
@@ -118,20 +118,11 @@ export function mountN64Controls(root, game) {
   fireBtn.addEventListener('pointerup', () => fireBtn.classList.remove('pressed'));
   fireBtn.addEventListener('pointerleave', () => fireBtn.classList.remove('pressed'));
 
-  // Hold-to-aim
-  const startAim = (e) => {
+  // Tap-to-toggle aim (holding a button + steering the stick is impossible one-handed)
+  aimBtn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    aimBtn.classList.add('pressed');
-    game.setAiming(true);
-  };
-  const endAim = () => {
-    aimBtn.classList.remove('pressed');
-    game.setAiming(false);
-  };
-  aimBtn.addEventListener('pointerdown', startAim);
-  aimBtn.addEventListener('pointerup', endAim);
-  aimBtn.addEventListener('pointerleave', endAim);
-  aimBtn.addEventListener('pointercancel', endAim);
+    game.toggleAiming();
+  });
 
   game.subscribe((state) => {
     const gameplay = state.booted && state.active;
@@ -140,6 +131,7 @@ export function mountN64Controls(root, game) {
     cycleBtn.classList.toggle('hidden', !(gameplay && state.inventory.length > 1));
     fireBtn.classList.toggle('hidden', !(gameplay && state.activeItem));
     aimBtn.classList.toggle('hidden', !(gameplay && state.activeItem === 'pistol'));
+    aimBtn.classList.toggle('pressed', state.aiming);
 
     // Item label
     if (gameplay && state.activeItem) {

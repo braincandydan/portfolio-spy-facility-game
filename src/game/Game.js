@@ -131,8 +131,10 @@ export class Game {
       this._pickups = pickups;
       this._viewmodels = viewmodels;
       for (const vm of Object.values(viewmodels)) {
+        vm.group.userData.basePos = vm.group.position.clone();
         cam.add(vm.group);
       }
+      this._layoutViewmodels();
 
       this._targets = buildTargets(THREE, scene);
       this._raycaster = new THREE.Raycaster();
@@ -160,6 +162,22 @@ export class Game {
     this.cam.aspect = W / H;
     this.cam.updateProjectionMatrix();
     this.renderer.setSize(Math.max(2, Math.floor(W * this.pixelation)), Math.max(2, Math.floor(H * this.pixelation)), false);
+    this._layoutViewmodels();
+  }
+
+  /**
+   * Portrait phones have a much narrower horizontal FOV — the default viewmodel
+   * offset (x=0.32) lands off-screen. Pull it toward center on narrow aspects.
+   */
+  _layoutViewmodels() {
+    if (!this._viewmodels || !this.cam) return;
+    const aspect = this.cam.aspect || 1;
+    const xScale = aspect < 0.95 ? 0.38 : (aspect < 1.4 ? 0.7 : 1);
+    for (const vm of Object.values(this._viewmodels)) {
+      const base = vm.group.userData.basePos;
+      if (!base) continue;
+      vm.group.position.set(base.x * xScale, base.y, base.z);
+    }
   }
 
   _loop() {
@@ -349,12 +367,15 @@ export class Game {
   setJoystick = (x, y) => { this._rawStick = { x, y }; };
 
   setAiming = (on) => {
+    if (this._aiming === !!on) return;
     this._aiming = !!on;
-    if (on) {
-      this.setState({ aiming: true, aimCross: { x: 0, y: 0 } });
-    } else {
-      this.setState({ aiming: false, aimCross: { x: 0, y: 0 } });
-    }
+    this.setState({ aiming: this._aiming, aimCross: { x: 0, y: 0 } });
+  };
+
+  /** Tap-toggle for the on-screen AIM button — holding is impossible one-handed. */
+  toggleAiming = () => {
+    this.setAiming(!this._aiming);
+    this.audio.blip(this._aiming ? 560 : 380);
   };
 
   // ---- public actions ----

@@ -113,8 +113,7 @@ function buildHud(game) {
   const ticker = el('div', 'hud__ticker', `<div class="track">${tickerText}${tickerText}</div>`);
   node.appendChild(ticker);
 
-  const watchHint = el('div', 'hud__watch-hint', `◷ WATCH`);
-  node.appendChild(watchHint);
+  // (watch hint removed — the on-screen ◷ button is always visible now)
 
   return {
     node,

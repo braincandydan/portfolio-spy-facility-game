@@ -167,7 +167,8 @@ export function buildLevel(THREE, scene, assets = null) {
   };
 
   /** Windowed wall along X (faces ±Z): solid segments with a glass pane in the middle. */
-  const addWindowedWallX = (z, x0, x1, windowCenter, windowW = 3.2) => {
+  const addWindowedWallX = (z, xa, xb, windowCenter, windowW = 3.2) => {
+    const x0 = Math.min(xa, xb), x1 = Math.max(xa, xb); // wings pass reversed coords on the negative side
     const yGlass = 2.2;
     const glassH = 1.8;
     const half = windowW / 2;
@@ -199,7 +200,8 @@ export function buildLevel(THREE, scene, assets = null) {
   };
 
   /** Windowed wall along Z (faces ±X). */
-  const addWindowedWallZ = (x, z0, z1, windowCenter, windowW = 3.2) => {
+  const addWindowedWallZ = (x, za, zb, windowCenter, windowW = 3.2) => {
+    const z0 = Math.min(za, zb), z1 = Math.max(za, zb); // wings pass reversed coords on the negative side
     const yGlass = 2.2;
     const glassH = 1.8;
     const half = windowW / 2;

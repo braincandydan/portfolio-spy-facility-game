@@ -1,5 +1,8 @@
 import { buildLevel } from './level.js';
-import { ZONES, ZONE_ORDER, BRIEFING_POINT, isWalkable, areaAt, START_POSITION } from './zones.js';
+import {
+  ZONES, ZONE_ORDER, WARP_TARGETS, BRIEFING_POINT, ARCADE_POINT,
+  isWalkable, areaAt, START_POSITION,
+} from './zones.js';
 import { ALIEN_DIALOGUE, ALIEN_SPEAKER } from './alien.js';
 import { AudioEngine } from '../audio.js';
 import {
@@ -8,18 +11,18 @@ import {
 } from './gun.js';
 import {
   processStick, TURN_RATE, WALK_SPEED, PITCH_RECENTER,
-  AIM_BOX, AIM_STICK_SPEED, AIM_EDGE_TURN, AIM_EDGE_PITCH,
 } from './n64Stick.js';
 import { loadAssets } from './assets.js';
 import {
   ITEM_IDS, buildItems, updatePickups, nearestPickup, buildProceduralCrate, buildCoffeeCup,
 } from './items.js';
 
-const PITCH_LIMIT = 1.4;
 const RECOIL_KICK = 0.05;
 const RECOIL_DECAY = 10;
 const PROXIMITY_RADIUS = 4;
-const AUTO_AIM_CONE = 0.22; // rad (~12.5°) — hip-fire snaps to targets inside this cone
+const AUTO_AIM_CONE = 0.28; // rad — hip-fire snaps to shootable targets
+const GUIDE_AIM_RANGE = 12; // soft look-at pull toward nearby interactables
+const GUIDE_AIM_RATE = 1.8; // rad/s max correction
 
 // Caffeine: drains over ~3 minutes; below the LOW threshold you slow down.
 const CAFFEINE_DRAIN = 100 / 180;
@@ -61,8 +64,6 @@ export class Game {
       hasGun: false,
       inventory: [],
       activeItem: null,
-      aiming: false,
-      aimCross: { x: 0, y: 0 },
       lockMsg: null,
       dialogue: null, // { speaker, lines, idx }
       caffeine: 100,
@@ -83,7 +84,7 @@ export class Game {
     this._recoilPitch = 0;
     this._rawStick = { x: 0, y: 0 };
     this._kbStick = { x: 0, y: 0 };
-    this._aiming = false;
+    this._ventOpened = false;
 
     this._onKeyDown = this._onKeyDown.bind(this);
     this._onKeyUp = this._onKeyUp.bind(this);
@@ -137,13 +138,15 @@ export class Game {
         crate: (T) => buildProceduralCrate(T, 1),
       });
 
-      const { core, doorSystem, saucer, sigint, containment, beacon } = buildLevel(THREE, scene, this._assets);
+      const { core, doorSystem, saucer, sigint, containment, beacon, vent, recRoom } = buildLevel(THREE, scene, this._assets);
       this._core = core;
       this._doors = doorSystem;
       this._saucer = saucer;
       this._sigint = sigint;
       this._containment = containment;
       this._beacon = beacon;
+      this._vent = vent;
+      this._recRoom = recRoom;
 
       const { pickups, viewmodels } = buildItems(THREE, scene, this._assets);
       this._pickups = pickups;
@@ -227,15 +230,12 @@ export class Game {
       Math.max(-1, Math.min(1, this._rawStick.y + this._kbStick.y)),
     );
 
-    if (this.state.active && this.state.booted) {
-      if (this._aiming) {
-        this._updateAim(dt, stick);
-      } else {
-        this._updateMove(dt, stick);
-      }
+    if (this.state.active && this.state.booted && !this.state.dialogue) {
+      this._updateMove(dt, stick);
+      this._updateGuideAim(dt, stick);
       this._updateZones();
       this._updateCaffeine(dt);
-      this._doors?.update(dt, this.px, this.pz, this.state.inventory.includes(ITEM_IDS.KEYCARD));
+      this._doors?.update(dt, this.px, this.pz);
     }
 
     this.cam.position.set(this.px, 1.7, this.pz);
@@ -252,6 +252,8 @@ export class Game {
     this._saucer?.animate(dt, now);
     this._containment?.animate(dt, now);
     this._sigint?.animate(dt);
+    this._vent?.update(dt);
+    this._recRoom?.animate(dt, now);
     if (this._beacon) this._beacon.intensity = 3 + (Math.sin(now / 620) * 0.5 + 0.5) * 7;
 
     if (this._pickups) updatePickups(this._pickups, dt);
@@ -313,31 +315,48 @@ export class Game {
     if (v !== this.state.stickWear) this.setState({ stickWear: v });
   };
 
-  _updateAim(dt, stick) {
-    // Stick drives crosshair inside aim box; pushing past the edge turns/pitches
-    const box = AIM_BOX;
-    let cx = this.state.aimCross.x + stick.turn * AIM_STICK_SPEED * dt;
-    let cy = this.state.aimCross.y + stick.walk * AIM_STICK_SPEED * dt;
+  /** Soft camera pull toward nearby interactables so the stick "finds" objects. */
+  _updateGuideAim(dt, stick) {
+    // Don't fight a strong turn input — only nudge when the player is mostly walking.
+    if (Math.abs(stick.turn) > 0.45) return;
 
-    if (cx > box) {
-      this.yaw -= AIM_EDGE_TURN * Math.min(1, Math.abs(stick.turn)) * dt;
-      cx = box;
-    } else if (cx < -box) {
-      this.yaw += AIM_EDGE_TURN * Math.min(1, Math.abs(stick.turn)) * dt;
-      cx = -box;
-    }
-    if (cy > box) {
-      this.pitch += AIM_EDGE_PITCH * Math.min(1, Math.abs(stick.walk)) * dt;
-      cy = box;
-    } else if (cy < -box) {
-      this.pitch -= AIM_EDGE_PITCH * Math.min(1, Math.abs(stick.walk)) * dt;
-      cy = -box;
-    }
-    this.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, this.pitch));
+    const target = this._nearestGuidePoint();
+    if (!target) return;
+    const dist = Math.hypot(this.px - target.x, this.pz - target.z);
+    if (dist < 0.8 || dist > GUIDE_AIM_RANGE) return;
 
-    if (this.state.aimCross.x !== cx || this.state.aimCross.y !== cy) {
-      this.setState({ aimCross: { x: cx, y: cy } });
+    const yawTo = Math.atan2(-(target.x - this.px), -(target.z - this.pz));
+    let rel = yawTo - this.yaw;
+    while (rel > Math.PI) rel -= Math.PI * 2;
+    while (rel < -Math.PI) rel += Math.PI * 2;
+
+    // Stronger pull when close / looking away; fade when nearly facing it.
+    const strength = (1 - dist / GUIDE_AIM_RANGE) * (0.35 + Math.min(1, Math.abs(rel) / 0.9));
+    const maxStep = GUIDE_AIM_RATE * strength * dt;
+    this.yaw += Math.max(-maxStep, Math.min(maxStep, rel));
+  }
+
+  _nearestGuidePoint() {
+    let best = null;
+    let bd = GUIDE_AIM_RANGE;
+    for (const z of ZONES) {
+      const d = Math.hypot(this.px - z.target[0], this.pz - z.target[1]);
+      if (d < bd) { bd = d; best = { x: z.target[0], z: z.target[1] }; }
     }
+    for (const p of this._pickups || []) {
+      if (!p.mesh?.parent) continue;
+      const d = Math.hypot(this.px - p.def.position.x, this.pz - p.def.position.z);
+      if (d < bd) { bd = d; best = { x: p.def.position.x, z: p.def.position.z }; }
+    }
+    {
+      const d = Math.hypot(this.px - BRIEFING_POINT.x, this.pz - BRIEFING_POINT.z);
+      if (d < bd) { bd = d; best = { x: BRIEFING_POINT.x, z: BRIEFING_POINT.z }; }
+    }
+    if (this.state.inventory.includes(ITEM_IDS.MASTERKEY) || this._doors?.doors?.some((d) => d.def.id === 'w-inner' && d.unlocked)) {
+      const d = Math.hypot(this.px - ARCADE_POINT.x, this.pz - ARCADE_POINT.z);
+      if (d < bd) best = { x: ARCADE_POINT.x, z: ARCADE_POINT.z };
+    }
+    return best;
   }
 
   _updateZones() {
@@ -358,6 +377,16 @@ export class Game {
       }
     }
 
+    // Arcade cabinet in the REC ROOM
+    {
+      const d = Math.hypot(this.px - ARCADE_POINT.x, this.pz - ARCADE_POINT.z);
+      if (d < Math.min(nd, 3)) {
+        nd = d;
+        near = { id: ARCADE_POINT.id, name: ARCADE_POINT.name };
+        nearVerb = ARCADE_POINT.verb;
+      }
+    }
+
     const pickup = nearestPickup(this._pickups || [], this.px, this.pz, nd);
     if (pickup) {
       nd = Math.hypot(this.px - pickup.def.position.x, this.pz - pickup.def.position.z);
@@ -368,9 +397,7 @@ export class Game {
     // Locked door proximity message
     let lockMsg = null;
     const locked = this._doors?.isLockedNear(this.px, this.pz);
-    if (locked && !this.state.inventory.includes(ITEM_IDS.KEYCARD)) {
-      lockMsg = locked.lockMsg || 'LOCKED';
-    }
+    if (locked) lockMsg = locked.lockMsg || 'LOCKED';
 
     const area = areaAt(this.px, this.pz);
     const coords = `${this.px >= 0 ? '+' : ''}${this.px.toFixed(1)} · ${this.pz >= 0 ? '+' : ''}${this.pz.toFixed(1)}`;
@@ -378,22 +405,38 @@ export class Game {
       ? { zone: near.id, name: near.plain ? `${near.name} · ${near.plain}` : near.name, verb: nearVerb }
       : null;
 
-    // Guide: point at the nearest objective you haven't recovered yet
+    // Guide: next step in the progression (keycard unlock gates Hangar-1)
     let guide = null;
     {
-      let best = null, bd = Infinity;
-      for (const z of ZONES) {
-        if (this.state.objectives[z.id]) continue;
-        const d = Math.hypot(this.px - z.target[0], this.pz - z.target[1]);
-        if (d < bd) { bd = d; best = z; }
+      let plain = null;
+      let tgt = null;
+      if (!this.state.objectives.contact) {
+        plain = 'CONTACT ME';
+        tgt = WARP_TARGETS.contact;
+      } else if (!this.state.inventory.includes(ITEM_IDS.KEYCARD)) {
+        plain = 'KEYCARD + DOSSIER';
+        tgt = WARP_TARGETS.about;
+      } else if (!this.state.objectives.projects) {
+        plain = 'MY PROJECTS';
+        tgt = WARP_TARGETS.projects;
+      } else if (!this.state.objectives.skills) {
+        plain = this._ventOpened ? 'MY SKILLS' : 'VENT → SIGINT';
+        tgt = this._ventOpened ? WARP_TARGETS.skills : [10, -30];
+      } else if (!this.state.inventory.includes(ITEM_IDS.MASTERKEY)) {
+        plain = 'MASTER KEY';
+        tgt = [34, 4];
+      } else if (!this.state.objectives.resume) {
+        plain = 'MY RESUME';
+        tgt = WARP_TARGETS.resume;
       }
-      if (best) {
-        const yawTo = Math.atan2(-(best.target[0] - this.px), -(best.target[1] - this.pz));
+      if (tgt && plain) {
+        const bd = Math.hypot(this.px - tgt[0], this.pz - tgt[1]);
+        const yawTo = Math.atan2(-(tgt[0] - this.px), -(tgt[1] - this.pz));
         let rel = yawTo - this.yaw;
         while (rel > Math.PI) rel -= Math.PI * 2;
         while (rel < -Math.PI) rel += Math.PI * 2;
         const idx = ((Math.round(rel / (Math.PI / 4)) % 8) + 8) % 8;
-        guide = { plain: best.plain, arrow: GUIDE_ARROWS[idx], dist: Math.round(bd) };
+        guide = { plain, arrow: GUIDE_ARROWS[idx], dist: Math.round(bd) };
       }
     }
 
@@ -424,47 +467,33 @@ export class Game {
       return;
     }
     if (e.code === 'KeyE') {
-      if (this.state.active && this.state.prompt) { this.interact(); return; }
+      if (this.state.dialogue || (this.state.active && this.state.prompt)) {
+        this.interact();
+        return;
+      }
     }
     if (e.code === 'KeyQ' || e.code === 'KeyC') {
-      if (!e.repeat && this.state.active) this.cycleItem();
-      return;
-    }
-    if (e.code === 'KeyR') {
-      if (!e.repeat && this.state.active) this.setAiming(true);
+      if (!e.repeat && this.state.active && !this.state.dialogue) this.cycleItem();
       return;
     }
     if (e.code === 'KeyZ' || e.code === 'Space') {
       e.preventDefault();
-      if (!e.repeat && this.state.active) this.shoot();
+      if (!e.repeat && this.state.active && !this.state.dialogue) this.shoot();
       return;
     }
     this.keys[e.code] = true;
   }
 
   _onKeyUp(e) {
-    if (e.code === 'KeyR') { this.setAiming(false); return; }
     this.keys[e.code] = false;
   }
 
   // ---- stick / button API (bound by n64Controls) ----
   setJoystick = (x, y) => { this._rawStick = { x, y }; };
 
-  setAiming = (on) => {
-    if (this._aiming === !!on) return;
-    this._aiming = !!on;
-    this.setState({ aiming: this._aiming, aimCross: { x: 0, y: 0 } });
-  };
-
-  /** Tap-toggle for the on-screen AIM button — holding is impossible one-handed. */
-  toggleAiming = () => {
-    this.setAiming(!this._aiming);
-    this.audio.blip(this._aiming ? 560 : 380);
-  };
-
   // ---- public actions ----
   canvasClick = () => {
-    if (this.state.booted && !this.state.showWatch && !this.state.panel) {
+    if (this.state.booted && !this.state.showWatch && !this.state.panel && !this.state.dialogue) {
       if (!this.state.active) this.setState({ active: true });
     }
   };
@@ -483,9 +512,8 @@ export class Game {
   toggleWatch = () => {
     const open = !this.state.showWatch;
     if (open) {
-      this.setAiming(false);
       this.audio.blip(720);
-      this.setState({ showWatch: true, panel: null, active: false });
+      this.setState({ showWatch: true, panel: null, dialogue: null, active: false });
     } else {
       this.setState({ showWatch: false, active: true });
       this.audio.blip(440);
@@ -507,10 +535,11 @@ export class Game {
   };
 
   openPanel = (id) => {
-    this.setAiming(false);
     this.audio.blip(680);
     this._mark(id);
-    this.setState({ panel: id, active: false });
+    // Viewing projects unseals the maintenance vent into SIGINT
+    if (id === 'projects') this._openVent();
+    this.setState({ panel: id, dialogue: null, active: false });
   };
 
   closePanel = () => {
@@ -519,7 +548,7 @@ export class Game {
   };
 
   interact = () => {
-    // Dialogue in progress → E/USE advances it
+    // Dialogue in progress → E / tap advances it
     if (this.state.dialogue) { this.advanceDialogue(); return; }
     if (!(this.state.active && this.state.prompt)) return;
     const zone = this.state.prompt.zone;
@@ -527,13 +556,14 @@ export class Game {
       this.pickupItem(zone.slice(5));
     } else if (zone === 'contact') {
       this.startDialogue();
+    } else if (zone === 'arcade') {
+      this.openPanel('arcade');
     } else {
       this.openPanel(zone);
     }
   };
 
   startDialogue = () => {
-    this.setAiming(false);
     this.audio.blip(340);
     this.setState({ dialogue: { speaker: ALIEN_SPEAKER, lines: ALIEN_DIALOGUE, idx: 0 } });
   };
@@ -545,7 +575,7 @@ export class Game {
       this.audio.blip(420 + d.idx * 40);
       this.setState({ dialogue: { ...d, idx: d.idx + 1 } });
     } else {
-      // The alien opens the secure channels for you
+      // Alien hands over contact channels early — then points you at the dossier
       this.setState({ dialogue: null });
       this.openPanel('contact');
     }
@@ -575,10 +605,25 @@ export class Game {
     this._showViewmodel(id);
 
     if (id === ITEM_IDS.KEYCARD) {
-      this._doors?.unlock('w-outer');
+      this._doors?.unlockByKey(ITEM_IDS.KEYCARD);
       this.audio.blip(990);
+      // Keycard sits on the about-me dossier — open it so the player reads both
+      setTimeout(() => this.openPanel('about'), 220);
+    }
+    if (id === ITEM_IDS.MASTERKEY) {
+      this._doors?.unlockByKey(ITEM_IDS.MASTERKEY);
+      this.audio.blip(990);
+      setTimeout(() => this.audio.blip(660), 120);
     }
   };
+
+  _openVent() {
+    if (this._ventOpened) return;
+    this._ventOpened = true;
+    this._vent?.open();
+    this.audio.blip(540);
+    setTimeout(() => this.audio.blip(780), 100);
+  }
 
   cycleItem = () => {
     const inv = this.state.inventory;
@@ -599,66 +644,54 @@ export class Game {
 
   shoot = () => {
     const s = this.state;
-    if (!(s.active && !s.showWatch && !s.panel)) return;
+    if (!(s.active && !s.showWatch && !s.panel && !s.dialogue)) return;
 
     const item = s.activeItem;
     if (item === ITEM_IDS.CAMERA) {
       this._useCamera();
       return;
     }
-    if (item === ITEM_IDS.KEYCARD) {
+    if (item === ITEM_IDS.KEYCARD || item === ITEM_IDS.MASTERKEY) {
       this.audio.blip(300);
       return;
     }
     if (item !== ITEM_IDS.PISTOL) return;
 
     const THREE = this.THREE;
-    const ndc = this._aiming
-      ? { x: s.aimCross.x, y: s.aimCross.y }
-      : { x: 0, y: 0 };
-
     let hitPoint = null;
     let hitObj = null;
 
-    if (this._aiming) {
-      this._raycaster.setFromCamera(ndc, this.cam);
+    // Auto-aim: snap the shot to the best target inside a view cone, else center ray.
+    const camPos = new THREE.Vector3();
+    this.cam.getWorldPosition(camPos);
+    const fwd = new THREE.Vector3();
+    this.cam.getWorldDirection(fwd);
+
+    let best = null;
+    let bestAng = AUTO_AIM_CONE;
+    for (const t of this._targets || []) {
+      if (!t.parent) continue;
+      const dir = t.getWorldPosition(new THREE.Vector3()).sub(camPos);
+      const dist = dir.length();
+      if (dist > 45) continue;
+      dir.normalize();
+      const ang = fwd.angleTo(dir);
+      if (ang < bestAng) { bestAng = ang; best = { mesh: t, dir }; }
+    }
+
+    if (best) {
+      this._raycaster.set(camPos, best.dir);
+      const hits = this._raycaster.intersectObjects(this.scene.children, true);
+      if (hits.length && hits[0].object.userData.isTarget) {
+        hitPoint = hits[0].point;
+        hitObj = hits[0].object;
+      }
+    }
+
+    if (!hitPoint) {
+      this._raycaster.setFromCamera({ x: 0, y: 0 }, this.cam);
       const hits = this._raycaster.intersectObjects(this.scene.children, true);
       if (hits.length) { hitPoint = hits[0].point; hitObj = hits[0].object; }
-    } else {
-      // GoldenEye hip-fire auto-aim: snap the shot to the best target inside a
-      // view cone (handles both horizontal and vertical offset), if it has
-      // line of sight. Otherwise fall back to the screen-center ray.
-      const camPos = new THREE.Vector3();
-      this.cam.getWorldPosition(camPos);
-      const fwd = new THREE.Vector3();
-      this.cam.getWorldDirection(fwd);
-
-      let best = null;
-      let bestAng = AUTO_AIM_CONE;
-      for (const t of this._targets || []) {
-        if (!t.parent) continue;
-        const dir = t.getWorldPosition(new THREE.Vector3()).sub(camPos);
-        const dist = dir.length();
-        if (dist > 45) continue;
-        dir.normalize();
-        const ang = fwd.angleTo(dir);
-        if (ang < bestAng) { bestAng = ang; best = { mesh: t, dir }; }
-      }
-
-      if (best) {
-        this._raycaster.set(camPos, best.dir);
-        const hits = this._raycaster.intersectObjects(this.scene.children, true);
-        if (hits.length && hits[0].object.userData.isTarget) {
-          hitPoint = hits[0].point;
-          hitObj = hits[0].object;
-        }
-      }
-
-      if (!hitPoint) {
-        this._raycaster.setFromCamera({ x: 0, y: 0 }, this.cam);
-        const hits = this._raycaster.intersectObjects(this.scene.children, true);
-        if (hits.length) { hitPoint = hits[0].point; hitObj = hits[0].object; }
-      }
     }
 
     const muzzleWorld = new THREE.Vector3();

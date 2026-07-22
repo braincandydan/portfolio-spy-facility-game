@@ -4,8 +4,9 @@
 
 import { buildDoors, DOOR_DEFS } from './doors.js';
 import { buildContainment } from './alien.js';
+import { setGateOpen, VENT } from './zones.js';
 import {
-  buildSaucer, buildE115Crates, buildVaultArchives, buildSigintScreens, buildHazardStrips,
+  buildSaucer, buildE115Crates, buildDocsTable, buildRecRoom, buildSigintScreens, buildHazardStrips,
 } from './s4props.js';
 
 export function makeLabelTexture(THREE, text, fg) {
@@ -239,6 +240,42 @@ export function buildLevel(THREE, scene, assets = null) {
     addWall(sx, 5.5, 0.5, 5);
   });
 
+  // ---- Vent walls: like windowed walls, but with a floor-level crawl opening ----
+  /** Wall along Z (faces ±X) with a vent opening instead of a window. */
+  const addVentWallZ = (x, za, zb, center) => {
+    const z0 = Math.min(za, zb), z1 = Math.max(za, zb);
+    const half = VENT.width / 2;
+    addWall(x, (z0 + center - half) / 2, 0.5, center - half - z0);
+    addWall(x, (center + half + z1) / 2, 0.5, z1 - center - half);
+    // Lintel above the crawl opening
+    const lintelH = 5 - VENT.height;
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(0.5, lintelH, VENT.width), upperMat);
+    lintel.position.set(x, VENT.height + lintelH / 2, center);
+    scene.add(lintel);
+    // Frame posts
+    const postL = new THREE.Mesh(new THREE.BoxGeometry(0.55, VENT.height, 0.14), frameMat);
+    postL.position.set(x, VENT.height / 2, center - half);
+    const postR = postL.clone();
+    postR.position.z = center + half;
+    scene.add(postL, postR);
+  };
+  /** Wall along X (faces ±Z) with a vent opening instead of a window. */
+  const addVentWallX = (z, xa, xb, center) => {
+    const x0 = Math.min(xa, xb), x1 = Math.max(xa, xb);
+    const half = VENT.width / 2;
+    addWall((x0 + center - half) / 2, z, center - half - x0, 0.5);
+    addWall((center + half + x1) / 2, z, x1 - center - half, 0.5);
+    const lintelH = 5 - VENT.height;
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(VENT.width, lintelH, 0.5), upperMat);
+    lintel.position.set(center, VENT.height + lintelH / 2, z);
+    scene.add(lintel);
+    const postL = new THREE.Mesh(new THREE.BoxGeometry(0.14, VENT.height, 0.55), frameMat);
+    postL.position.set(center - half, VENT.height / 2, z);
+    const postR = postL.clone();
+    postR.position.x = center + half;
+    scene.add(postL, postR);
+  };
+
   // ---- Wings: corridor walls with windows looking into rooms ----
   const zWing = (s) => {
     const iz = s * 20;
@@ -248,9 +285,10 @@ export function buildLevel(THREE, scene, assets = null) {
     addWall(6.5, iz, 7, 0.5);
     // Outer room end wall
     addWall(0, oz, 20, 0.5);
-    // Side walls of room — windowed
+    // Side walls of room — windowed (north wing east wall carries the vent instead)
     addWindowedWallZ(-10, s * 20, s * 40, s * 30);
-    addWindowedWallZ(10, s * 20, s * 40, s * 30);
+    if (s === -1) addVentWallZ(10, s * 20, s * 40, s * 30);
+    else addWindowedWallZ(10, s * 20, s * 40, s * 30);
     // Corridor side walls
     addWall(-3, s * 14, 0.5, 12);
     addWall(3, s * 14, 0.5, 12);
@@ -261,12 +299,82 @@ export function buildLevel(THREE, scene, assets = null) {
     addWall(ix, -6.5, 0.5, 7);
     addWall(ix, 6.5, 0.5, 7);
     addWall(ox, 0, 0.5, 20);
-    addWindowedWallX(-10, s * 20, s * 40, s * 30);
+    // East wing north wall carries the vent exit
+    if (s === 1) addVentWallX(-10, s * 20, s * 40, s * 30);
+    else addWindowedWallX(-10, s * 20, s * 40, s * 30);
     addWindowedWallX(10, s * 20, s * 40, s * 30);
     addWall(s * 14, -3, 12, 0.5);
     addWall(s * 14, 3, 12, 0.5);
   };
   zWing(-1); zWing(1); xWing(1); xWing(-1);
+
+  // ---- Maintenance vent duct: Hangar-1 → SIGINT (L-shape, low ceiling) ----
+  const ductMat = new THREE.MeshLambertMaterial({ color: 0x3a4048, flatShading: true });
+  const addDuctWall = (cx, cz, w, d) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, VENT.height, d), ductMat);
+    m.position.set(cx, VENT.height / 2, cz);
+    scene.add(m);
+  };
+  // E-W leg (interior z −31.2..−28.8, x 10..31.2)
+  addDuctWall(20.85, -31.45, 21.7, 0.5); // north side
+  addDuctWall(19.15, -28.55, 18.3, 0.5); // south side (stops at the corner)
+  // N-S leg (interior x 28.8..31.2, z −31.2..−10)
+  addDuctWall(31.45, -20.6, 0.5, 21.2);  // east side
+  addDuctWall(28.55, -19.15, 0.5, 18.3); // west side
+  // Low ceiling slabs
+  const ductCeil1 = new THREE.Mesh(new THREE.BoxGeometry(21.9, 0.2, 3.4), ductMat);
+  ductCeil1.position.set(20.85, VENT.height + 0.1, -30);
+  scene.add(ductCeil1);
+  const ductCeil2 = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.2, 18.9), ductMat);
+  ductCeil2.position.set(30, VENT.height + 0.1, -19.5);
+  scene.add(ductCeil2);
+  // Dim duct lights so it reads as a crawlspace, not the void
+  const ductLight1 = new THREE.PointLight(0x2fd4c6, 5, 14, 1.6);
+  ductLight1.position.set(20, VENT.height - 0.4, -30);
+  scene.add(ductLight1);
+  const ductLight2 = new THREE.PointLight(0xffb000, 5, 14, 1.6);
+  ductLight2.position.set(30, VENT.height - 0.4, -20);
+  scene.add(ductLight2);
+
+  // Grate over the hangar-side mouth — slides up once PROJECTS intel is recovered
+  const grate = new THREE.Group();
+  grate.position.set(VENT.entry.x, 0, VENT.entry.z);
+  {
+    const barMat = new THREE.MeshLambertMaterial({ color: 0x596470, flatShading: true });
+    const half = VENT.width / 2;
+    for (let i = 0; i <= 6; i++) {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.1, VENT.height - 0.2, 0.12), barMat);
+      bar.position.set(0, VENT.height / 2, -half + 0.2 + (i / 6) * (VENT.width - 0.4));
+      grate.add(bar);
+    }
+    for (const y of [0.25, VENT.height - 0.25]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, VENT.width - 0.15), barMat);
+      rail.position.set(0, y, 0);
+      grate.add(rail);
+    }
+    const lock = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.24, 0.3), new THREE.MeshBasicMaterial({ color: 0xff5a52 }));
+    lock.position.set(0, VENT.height / 2, 0);
+    grate.add(lock);
+    grate.userData.lock = lock;
+  }
+  scene.add(grate);
+  setGateOpen('vent', false, VENT.gateRect);
+
+  const vent = {
+    isOpen: false,
+    _h: 0,
+    open() {
+      if (this.isOpen) return;
+      this.isOpen = true;
+      grate.userData.lock.material.color.set(0x2fd4c6);
+    },
+    update(dt) {
+      if (!this.isOpen || this._h >= 1) return;
+      this._h = Math.min(1, this._h + dt * 1.1);
+      grate.position.y = this._h * (VENT.height + 0.3);
+      if (this._h > 0.7) setGateOpen('vent', true);
+    },
+  };
 
   // Doors at thresholds
   const doorSystem = buildDoors(THREE, scene, { doorMat: metalMat, frameMat });
@@ -298,7 +406,9 @@ export function buildLevel(THREE, scene, assets = null) {
   sign(0, 3.4, -20.2, 'HANGAR-1', 0, '#ffb000');
   sign(0, 3.4, 20.2, 'XENO-LAB', Math.PI, '#2fd4c6');
   sign(20.2, 3.4, 0, 'SIGINT', -Math.PI / 2, '#ffb000');
-  sign(-20.2, 3.4, 0, 'VAULT', Math.PI / 2, '#2fd4c6');
+  sign(-20.2, 3.4, 0, 'REC ROOM', Math.PI / 2, '#2fd4c6');
+  // Vent mouth signage (hangar side, above the grate)
+  sign(VENT.entry.x - 0.4, VENT.height + 0.9, VENT.entry.z, 'MAINTENANCE', -Math.PI / 2, '#ffb000');
   // Black-site warnings in the atrium
   sign(0, 4.3, -7.75, 'S-4 · RESTRICTED', 0, '#ff5a52');
   sign(0, 4.3, 7.75, 'USE OF DEADLY FORCE AUTHORIZED', Math.PI, '#ff5a52');
@@ -334,11 +444,12 @@ export function buildLevel(THREE, scene, assets = null) {
   }
   const sigint = buildSigintScreens(THREE, scene);
 
-  // XENO-LAB (S): containment cell with the alien
+  // XENO-LAB (S): containment cell + docs table (keycard / about me)
   const containment = buildContainment(THREE, scene, { x: 0, z: 32 });
+  buildDocsTable(THREE, scene, { x: 4.5, z: 29.5 });
 
-  // VAULT (W): filing cabinets, classified folders, reading table
-  buildVaultArchives(THREE, scene);
+  // REC ROOM (W): arcade + couch + shooting range (unlocked by master key)
+  const recRoom = buildRecRoom(THREE, scene);
 
   // DATA CORE (atrium): glowing data pedestal
   const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, 1.2, 8), mat(0x2b3138));
@@ -351,5 +462,5 @@ export function buildLevel(THREE, scene, assets = null) {
   core.position.set(0, 1.9, 3);
   scene.add(core);
 
-  return { core, doorSystem, saucer, sigint, containment, beacon };
+  return { core, doorSystem, saucer, sigint, containment, beacon, vent, recRoom };
 }

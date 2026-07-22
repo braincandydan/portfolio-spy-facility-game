@@ -153,48 +153,119 @@ function makeFolderTexture(THREE, stamp = 'TOP SECRET') {
   return tex;
 }
 
-export function buildVaultArchives(THREE, scene) {
-  const cabMat = lambert(THREE, 0x39424c);
-
-  // Filing cabinet rows
-  for (let r = 0; r < 2; r++) {
-    for (let i = 0; i < 5; i++) {
-      const cab = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.2, 0.8), cabMat);
-      cab.position.set(-38 + i * 1.25, 1.1, r === 0 ? -8.5 : 8.5);
-      scene.add(cab);
-      // drawer lines
-      for (let d = 0; d < 4; d++) {
-        const handle = new THREE.Mesh(
-          new THREE.BoxGeometry(0.4, 0.05, 0.06),
-          new THREE.MeshBasicMaterial({ color: 0x6b7079 }),
-        );
-        handle.position.set(-38 + i * 1.25, 0.45 + d * 0.5, r === 0 ? -8.06 : 8.06);
-        scene.add(handle);
-      }
-    }
-  }
-
-  // Reading table with scattered classified folders
-  const table = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.0, 1.6), lambert(THREE, 0x33291f));
-  table.position.set(-32, 0.5, 0);
+/**
+ * Reading table piled with classified personnel documents — the keycard pickup
+ * floats above it (see items.js). Placed in the XENO-LAB next to the cell.
+ */
+export function buildDocsTable(THREE, scene, position = { x: 4.5, z: 29.5 }) {
+  const table = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.0, 1.5), lambert(THREE, 0x33291f));
+  table.position.set(position.x, 0.5, position.z);
   scene.add(table);
 
-  const folderMat = new THREE.MeshLambertMaterial({ map: makeFolderTexture(THREE) });
+  const folderMat = new THREE.MeshLambertMaterial({ map: makeFolderTexture(THREE, 'PERSONNEL') });
   const spots = [
-    { x: -32.8, z: -0.3, ry: 0.3 }, { x: -31.6, z: 0.2, ry: -0.5 }, { x: -32.2, z: 0.45, ry: 0.1 },
+    { dx: -0.7, dz: -0.25, ry: 0.3 }, { dx: 0.5, dz: 0.2, ry: -0.5 }, { dx: -0.1, dz: 0.4, ry: 0.1 },
   ];
   for (const s of spots) {
     const folder = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.03, 0.45), folderMat);
-    folder.position.set(s.x, 1.03, s.z);
+    folder.position.set(position.x + s.dx, 1.03, position.z + s.dz);
     folder.rotation.y = s.ry;
     scene.add(folder);
   }
 
   // Loose paper stack
   const paper = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.09, 0.6), lambert(THREE, 0xd8dce2));
-  paper.position.set(-31.2, 1.06, -0.35);
+  paper.position.set(position.x + 0.85, 1.06, position.z - 0.35);
   paper.rotation.y = 0.2;
   scene.add(paper);
+
+  // Small desk lamp glow so the table reads from the doorway
+  const lamp = new THREE.PointLight(0xffb000, 4, 8, 1.8);
+  lamp.position.set(position.x, 2.2, position.z);
+  scene.add(lamp);
+}
+
+/**
+ * West wing REC ROOM: arcade cabinet + couch + shooting-range dressing.
+ * This is the expandable "games" room unlocked by the master key.
+ */
+export function buildRecRoom(THREE, scene) {
+  // ---- arcade cabinet (the PLAY interactable points here) ----
+  const cab = new THREE.Group();
+  cab.position.set(-32, 0, 0);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.1, 1.0), lambert(THREE, 0x27313d));
+  body.position.y = 1.05;
+  cab.add(body);
+  const marquee = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.35, 1.05), lambert(THREE, 0x1a1d22));
+  marquee.position.y = 2.25;
+  cab.add(marquee);
+  const marqueeGlow = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.1, 0.24),
+    new THREE.MeshBasicMaterial({ color: 0xff8f52 }),
+  );
+  marqueeGlow.position.set(0.66, 2.25, 0);
+  marqueeGlow.rotation.y = Math.PI / 2;
+  cab.add(marqueeGlow);
+
+  // Animated screen static (faces the room, +x)
+  const sc = document.createElement('canvas');
+  sc.width = 48; sc.height = 40;
+  const sctx = sc.getContext('2d');
+  const screenTex = new THREE.CanvasTexture(sc);
+  screenTex.magFilter = THREE.NearestFilter;
+  screenTex.minFilter = THREE.NearestFilter;
+  const drawArcade = (t) => {
+    sctx.fillStyle = '#06090c';
+    sctx.fillRect(0, 0, 48, 40);
+    // bouncing block "attract mode"
+    const bx = 8 + Math.abs(((t / 40) % 64) - 32);
+    const by = 8 + Math.abs(((t / 70) % 48) - 24) * 0.5;
+    sctx.fillStyle = '#2fd4c6';
+    sctx.fillRect(bx, by, 6, 6);
+    sctx.fillStyle = '#ffb000';
+    sctx.font = 'bold 7px monospace';
+    sctx.textAlign = 'center';
+    sctx.fillText('INSERT COIN', 24, 34);
+    screenTex.needsUpdate = true;
+  };
+  drawArcade(0);
+  const screen = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.85, 0.7),
+    new THREE.MeshBasicMaterial({ map: screenTex }),
+  );
+  screen.position.set(0.66, 1.45, 0);
+  screen.rotation.y = Math.PI / 2;
+  cab.add(screen);
+  scene.add(cab);
+
+  // ---- couch facing the cabinet ----
+  const couchMat = lambert(THREE, 0x4a3b2c);
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.5, 2.6), couchMat);
+  seat.position.set(-26, 0.25, 0);
+  scene.add(seat);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.1, 2.6), couchMat);
+  back.position.set(-25.6, 0.55, 0);
+  scene.add(back);
+
+  // ---- shooting range dressing (targets + pistol live in gun.js/items.js) ----
+  const rangeMat = lambert(THREE, 0x2b3138);
+  for (const z of [-6, 0, 6]) {
+    const stand = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.4, 0.25), rangeMat);
+    stand.position.set(-36.5, 1.2, z);
+    scene.add(stand);
+  }
+  // Range divider rail
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.0, 16), rangeMat);
+  rail.position.set(-34, 0.5, 0);
+  scene.add(rail);
+
+  let acc = 0;
+  return {
+    animate(dt, t) {
+      acc += dt;
+      if (acc > 0.1) { acc = 0; drawArcade(t); }
+    },
+  };
 }
 
 // ---------- SIGINT: screens ----------

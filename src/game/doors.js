@@ -3,18 +3,23 @@
 
 import { setGateOpen } from './zones.js';
 
-/** Door definitions — positions match the corridor thresholds in level.js / zones.js. */
+/**
+ * Door definitions — positions match the corridor thresholds in level.js / zones.js.
+ * `key` names the item that unlocks the door (see Game.pickupItem):
+ *   null      → open from the start (south wing, where the alien is)
+ *   'keycard' → north wing (Hangar-1 / projects)
+ *   'masterkey' → east + west wings (SIGINT exit doors, REC ROOM)
+ */
 export const DOOR_DEFS = [
   // Atrium → corridor (inner) and corridor → room (outer) for each wing
-  { id: 'n-inner', x: 0, z: -8, axis: 'x', width: 6, locked: false },
-  { id: 'n-outer', x: 0, z: -20, axis: 'x', width: 6, locked: false },
-  { id: 's-inner', x: 0, z: 8, axis: 'x', width: 6, locked: false },
-  { id: 's-outer', x: 0, z: 20, axis: 'x', width: 6, locked: false },
-  { id: 'e-inner', x: 8, z: 0, axis: 'z', width: 6, locked: false },
-  { id: 'e-outer', x: 20, z: 0, axis: 'z', width: 6, locked: false },
-  // West wing outer door is keycard-locked (bonus records vault)
-  { id: 'w-inner', x: -8, z: 0, axis: 'z', width: 6, locked: false },
-  { id: 'w-outer', x: -20, z: 0, axis: 'z', width: 6, locked: true, lockMsg: 'SECURITY CLEARANCE REQUIRED' },
+  { id: 'n-inner', x: 0, z: -8, axis: 'x', width: 6, key: 'keycard', lockMsg: 'LOCKED — KEYCARD REQUIRED' },
+  { id: 'n-outer', x: 0, z: -20, axis: 'x', width: 6, key: 'keycard', lockMsg: 'LOCKED — KEYCARD REQUIRED' },
+  { id: 's-inner', x: 0, z: 8, axis: 'x', width: 6, key: null },
+  { id: 's-outer', x: 0, z: 20, axis: 'x', width: 6, key: null },
+  { id: 'e-inner', x: 8, z: 0, axis: 'z', width: 6, key: 'masterkey', lockMsg: 'SEALED — SECURITY LOCKDOWN' },
+  { id: 'e-outer', x: 20, z: 0, axis: 'z', width: 6, key: 'masterkey', lockMsg: 'SEALED — SECURITY LOCKDOWN' },
+  { id: 'w-inner', x: -8, z: 0, axis: 'z', width: 6, key: 'masterkey', lockMsg: 'LOCKED — MASTER KEY REQUIRED' },
+  { id: 'w-outer', x: -20, z: 0, axis: 'z', width: 6, key: 'masterkey', lockMsg: 'LOCKED — MASTER KEY REQUIRED' },
 ];
 
 const DOOR_HEIGHT = 3.2;
@@ -25,7 +30,8 @@ const OPEN_DELAY = 0.18; // GoldenEye's characteristic pause before rising
 const PROXIMITY = 3.2;
 
 /**
- * Build door meshes into the scene. Returns a controller with update(dt, px, pz, hasKeycard).
+ * Build door meshes into the scene. Returns a controller with update(dt, px, pz)
+ * plus unlock helpers (Game calls unlockByKey when a key item is picked up).
  */
 export function buildDoors(THREE, scene, { doorMat, frameMat } = {}) {
   const metal = doorMat || new THREE.MeshLambertMaterial({ color: 0x4a5560, flatShading: true });
@@ -69,7 +75,7 @@ export function buildDoors(THREE, scene, { doorMat, frameMat } = {}) {
     // Status light strip
     const strip = new THREE.Mesh(
       new THREE.BoxGeometry(def.axis === 'x' ? def.width * 0.4 : 0.06, 0.08, def.axis === 'x' ? 0.06 : def.width * 0.4),
-      def.locked ? lockedAccent : accent,
+      def.key ? lockedAccent : accent,
     );
     strip.position.set(0, DOOR_HEIGHT * 0.65, def.axis === 'x' ? 0.08 : 0);
     if (def.axis === 'z') strip.position.set(0.08, DOOR_HEIGHT * 0.65, 0);
@@ -98,7 +104,7 @@ export function buildDoors(THREE, scene, { doorMat, frameMat } = {}) {
       height: 0, // 0 = closed, 1 = fully open
       delay: 0,
       wantOpen: false,
-      unlocked: !def.locked,
+      unlocked: !def.key,
     };
   });
 
@@ -110,6 +116,15 @@ export function buildDoors(THREE, scene, { doorMat, frameMat } = {}) {
       d.unlocked = true;
       d.strip.material = accent;
     },
+    /** Unlock every door whose `key` matches the picked-up item id. */
+    unlockByKey(key) {
+      for (const d of doors) {
+        if (d.def.key === key && !d.unlocked) {
+          d.unlocked = true;
+          d.strip.material = accent;
+        }
+      }
+    },
     isLockedNear(px, pz) {
       for (const d of doors) {
         if (d.unlocked) continue;
@@ -118,14 +133,8 @@ export function buildDoors(THREE, scene, { doorMat, frameMat } = {}) {
       }
       return null;
     },
-    update(dt, px, pz, hasKeycard) {
+    update(dt, px, pz) {
       for (const d of doors) {
-        // Auto-unlock keycard door when holding keycard
-        if (d.def.locked && hasKeycard && !d.unlocked) {
-          d.unlocked = true;
-          d.strip.material = accent;
-        }
-
         const dist = Math.hypot(px - d.def.x, pz - d.def.z);
         const shouldOpen = dist < PROXIMITY && d.unlocked;
 

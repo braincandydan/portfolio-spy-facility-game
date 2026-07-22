@@ -1,14 +1,15 @@
 // Xeno containment: procedural grey alien in a glass cell, idle animation,
-// and the dialogue it delivers before opening the comms panel.
+// and the dialogue that kicks off the facility progression.
 
 export const ALIEN_SPEAKER = 'SUBJECT J-RÖD — CELL 04';
 
 export const ALIEN_DIALOGUE = [
   'You are not the first to walk in here wearing a visitor badge. You are the first to stop.',
   'They keep me for the propulsion program. Element 115. Gravity wave amplification. The saucer in Hangar-1 — my ride home, technically.',
-  'I have watched your species\u2019 work through this glass. The operative whose file you carry... their projects are genuinely impressive. For a bipedal carbon unit.',
-  'You want to make contact? Good instinct. Communication is the only technology your kind actually mastered.',
-  'Here — I will open the secure channels for you. Tell them J-Röd sent you. They will not believe you, which is ideal.',
+  'Listen carefully. On the table beside this cell is a keycard, buried under a personnel dossier. That file is about the operative whose work you came to see.',
+  'Take the keycard. Read the dossier. Then get yourself into Hangar-1 and check the craft — the projects on that saucer are why you are here.',
+  'When you have seen the craft, a maintenance vent will unseal into SIGINT. Find the master key there if you want the rest of the facility.',
+  'And before you go — here are the secure channels. Talk to me anytime. Tell them J-Röd sent you.',
 ];
 
 /**

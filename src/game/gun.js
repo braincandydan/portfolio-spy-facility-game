@@ -3,11 +3,12 @@
 // Kept separate from Game.js so the weapon can be reworked without touching
 // input/state plumbing.
 
-export const GUN_PICKUP_POSITION = { x: 16, y: 1, z: 0 };
+// REC ROOM shooting range (west wing — unlocked by master key)
+export const GUN_PICKUP_POSITION = { x: -34, y: 1, z: -3 };
 const TARGET_POSITIONS = [
-  { x: 26, y: 1.6, z: -6 },
-  { x: 26, y: 1.6, z: 0 },
-  { x: 26, y: 1.6, z: 6 },
+  { x: -37, y: 1.6, z: -6 },
+  { x: -37, y: 1.6, z: 0 },
+  { x: -37, y: 1.6, z: 6 },
 ];
 
 const GUNMETAL = 0x2b2e34;

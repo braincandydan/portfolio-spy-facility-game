@@ -31,6 +31,8 @@ export function mountUI(root, game) {
 
   const hud = buildHud(game);
   root.appendChild(hud.node);
+  // Prompt sits above the stick layer so taps always hit it
+  if (hud.promptNode) root.appendChild(hud.promptNode);
 
   const toast = el('div', 'toast hidden', '✓ ALL INTEL RECOVERED — CLEARANCE ELEVATED TO 00');
   root.appendChild(toast);
@@ -105,34 +107,51 @@ function buildHud(game) {
   `);
   node.appendChild(guide);
 
-  const prompt = el('div', 'hud__prompt hidden', `
-    <div class="box">◉ <span class="key">[E]</span> — <span data-prompt-verb></span> <span data-prompt-name></span></div>
+  const touch = isTouchDevice();
+  const keyLabel = touch ? 'TAP' : '[E]';
+  const promptNode = el('div', 'hud__prompt hidden', `
+    <button type="button" class="box">◉ <span class="key">${keyLabel}</span> — <span data-prompt-verb></span> <span data-prompt-name></span></button>
   `);
-  node.appendChild(prompt);
+  promptNode.querySelector('.box').addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    game.interact();
+  });
 
-  const navHint = 'stick or arrows/WASD to move &nbsp;·&nbsp; [R] aim &nbsp;·&nbsp; [Z] fire &nbsp;·&nbsp; [E] use &nbsp;·&nbsp; [C] swap &nbsp;·&nbsp; [TAB] watch';
-  const tickerText = `<span class="tag">◆ OBJECTIVE</span> — recover all 5 intel caches (projects · skills · about · contact · resume) &nbsp;·&nbsp; follow the NEXT ▸ guide &nbsp;·&nbsp; grab ☕ coffee to stay caffeinated or you'll slow down &nbsp;·&nbsp; rest the stick when the spring wears out &nbsp;·&nbsp; ${navHint} &nbsp;·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
+  // On touch, tapping INTEL opens the field watch (no face buttons).
+  if (touch) {
+    intel.classList.add('hud__intel--tap');
+    intel.title = 'Open field watch';
+    intel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (game.state.booted) game.toggleWatch();
+    });
+  }
+
+  const navHint = touch
+    ? 'stick to move · tap the prompt to use · tap INTEL for watch'
+    : 'stick or arrows/WASD to move · [Z] fire · [E] / tap prompt to use · [C] swap · [TAB] watch';
+  const tickerText = `<span class="tag">◆ OBJECTIVE</span> — talk to the alien → take the keycard dossier → hangar projects → vent to SIGINT → master key → rec room &nbsp;·&nbsp; follow NEXT ▸ &nbsp;·&nbsp; ☕ coffee keeps you sharp &nbsp;·&nbsp; ${navHint} &nbsp;·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
   const ticker = el('div', 'hud__ticker', `<div class="track">${tickerText}${tickerText}</div>`);
   node.appendChild(ticker);
 
-  // (watch hint removed — the on-screen ◷ button is always visible now)
-
   return {
     node,
+    promptNode,
     update(state) {
       node.classList.toggle('hidden', !state.booted);
-      crosshair.classList.toggle('hidden', !state.active || state.aiming);
+      crosshair.classList.toggle('hidden', !state.active || !!state.dialogue);
       sector.querySelector('[data-area]').textContent = state.area;
       sector.querySelector('[data-coords]').textContent = state.coords;
       intel.querySelector('[data-visited]').textContent = game.objectivesVisited;
       intel.querySelector('[data-total]').textContent = game.objectivesTotal;
       intel.querySelector('[data-clearance]').textContent = CLEARANCE_LABELS[game.objectivesVisited];
       intel.querySelector('[data-armed]').classList.toggle('hidden', !state.hasGun);
-      const hasPrompt = !!(state.prompt && state.active);
-      prompt.classList.toggle('hidden', !hasPrompt);
+      const hasPrompt = !!(state.prompt && state.active && !state.dialogue);
+      promptNode.classList.toggle('hidden', !hasPrompt);
       if (hasPrompt) {
-        prompt.querySelector('[data-prompt-verb]').textContent = state.prompt.verb || 'ACCESS';
-        prompt.querySelector('[data-prompt-name]').textContent = state.prompt.name;
+        promptNode.querySelector('[data-prompt-verb]').textContent = state.prompt.verb || 'ACCESS';
+        promptNode.querySelector('[data-prompt-name]').textContent = state.prompt.name;
       }
 
       // caffeine + stick wear meters
@@ -158,13 +177,16 @@ function buildHud(game) {
 }
 
 function buildBoot(game) {
-  const keysLine = 'STICK / ARROWS / WASD MOVE &nbsp; · &nbsp; HOLD [R] AIM &nbsp; · &nbsp; [Z] FIRE &nbsp; · &nbsp; [E] USE &nbsp; · &nbsp; [C] SWAP &nbsp; · &nbsp; [TAB] WATCH &nbsp; · &nbsp; [ESC] PAUSE';
+  const touch = isTouchDevice();
+  const keysLine = touch
+    ? 'STICK TO MOVE &nbsp; · &nbsp; TAP THE PROMPT TO USE &nbsp; · &nbsp; TAP INTEL FOR WATCH &nbsp; · &nbsp; FOLLOW NEXT ▸'
+    : 'STICK / ARROWS / WASD MOVE &nbsp; · &nbsp; [Z] FIRE &nbsp; · &nbsp; [E] / CLICK PROMPT TO USE &nbsp; · &nbsp; [C] SWAP &nbsp; · &nbsp; [TAB] WATCH &nbsp; · &nbsp; [ESC] PAUSE';
   const node = el('div', 'boot', `
     <div class="boot__eyebrow">CLASSIFIED // LEVEL 00 CLEARANCE</div>
     <div class="boot__title">FIELD&nbsp;OPERATIVE</div>
     <div class="boot__subtitle">P O R T F O L I O</div>
     <div class="boot__rule"></div>
-    <div class="boot__cta">▶ ${isTouchDevice() ? 'TAP' : 'CLICK'} TO INSERT CARTRIDGE</div>
+    <div class="boot__cta">▶ ${touch ? 'TAP' : 'CLICK'} TO INSERT CARTRIDGE</div>
     <div class="boot__keys">${keysLine}</div>
     <div class="boot__err hidden" data-err></div>
   `);
@@ -181,17 +203,20 @@ function buildBoot(game) {
 }
 
 function buildPause(game) {
-  const hint = 'stick or arrows/WASD move · hold [R] aim · [Z] fire · [E] use · [C] swap · [TAB] watch';
+  const touch = isTouchDevice();
+  const hint = touch
+    ? 'stick to move · tap prompt to use · tap INTEL for watch'
+    : 'stick or arrows/WASD move · [Z] fire · [E] / click prompt to use · [C] swap · [TAB] watch · click outside menus to close';
   const node = el('div', 'pause hidden', `
     <div class="pause__title">PAUSED</div>
-    <div class="pause__cta">▶ ${isTouchDevice() ? 'TAP' : 'CLICK'} TO RESUME</div>
+    <div class="pause__cta">▶ ${touch ? 'TAP' : 'CLICK'} TO RESUME</div>
     <div class="pause__hint">${hint}</div>
   `);
   node.addEventListener('click', game.resume);
   return {
     node,
     update(state) {
-      const show = state.booted && !state.active && !state.showWatch && !state.panel;
+      const show = state.booted && !state.active && !state.showWatch && !state.panel && !state.dialogue;
       node.classList.toggle('hidden', !show);
     },
   };
@@ -218,7 +243,7 @@ function buildWatch(game) {
   const body = el('div', 'watch__body');
   const tabs = el('div', 'watch__tabs');
   const tabsClose = el('button', 'watch__tabs-close', isTouchDevice() ? '✕ close' : '[TAB] close');
-  tabsClose.addEventListener('click', game.toggleWatch);
+  tabsClose.addEventListener('click', (e) => { e.stopPropagation(); game.toggleWatch(); });
   const tabDefs = [['nav', '◇ NAV'], ['intel', '◆ INTEL'], ['dossier', '▤ DOSSIER'], ['comms', '✉ COMMS'], ['sys', '⚙ SYSTEM']];
   const tabButtons = tabDefs.map(([id, label]) => {
     const btn = el('button', 'watch__tab', label);
@@ -235,6 +260,12 @@ function buildWatch(game) {
   bezel.appendChild(screen);
   watch.appendChild(bezel);
   node.appendChild(watch);
+
+  // Click / tap the dimmed backdrop to close
+  node.addEventListener('click', (e) => {
+    if (e.target === node) game.toggleWatch();
+  });
+  watch.addEventListener('click', (e) => e.stopPropagation());
 
   return {
     node,
@@ -345,34 +376,57 @@ function buildPanel(game) {
   const panel = el('div', 'panel');
   const header = el('div', 'panel__header', `
     <div class="panel__title">// SECTOR ACCESS — <span data-panel-title></span></div>
-    <button class="panel__close">✕ [ESC]</button>
+    <button class="panel__close">✕ ${isTouchDevice() ? 'CLOSE' : '[ESC]'}</button>
   `);
-  header.querySelector('.panel__close').addEventListener('click', game.closePanel);
+  header.querySelector('.panel__close').addEventListener('click', (e) => {
+    e.stopPropagation();
+    game.closePanel();
+  });
   panel.appendChild(header);
   const body = el('div', 'panel__body');
   panel.appendChild(body);
   node.appendChild(panel);
+
+  node.addEventListener('click', (e) => {
+    if (e.target === node) game.closePanel();
+  });
+  panel.addEventListener('click', (e) => e.stopPropagation());
 
   return {
     node,
     update(state) {
       node.classList.toggle('hidden', !state.panel);
       if (!state.panel) return;
-      header.querySelector('[data-panel-title]').textContent = ZONE_NAMES[state.panel] || 'BRIEFING REEL';
+      const titles = {
+        ...ZONE_NAMES,
+        briefing: 'BRIEFING REEL',
+        arcade: 'REC ROOM — ARCADE',
+      };
+      header.querySelector('[data-panel-title]').textContent = titles[state.panel] || state.panel;
       body.innerHTML = renderPanelBody(state.panel);
     },
   };
 }
 
 function buildDialogue(game) {
+  const touch = isTouchDevice();
   const node = el('div', 'dialogue hidden');
   const box = el('div', 'dialogue__box', `
     <div class="dialogue__speaker" data-speaker></div>
     <div class="dialogue__line" data-line></div>
-    <div class="dialogue__hint">[E] ▸ <span data-progress></span></div>
+    <div class="dialogue__hint">${touch ? 'TAP' : '[E] / TAP'} ▸ <span data-progress></span> &nbsp;·&nbsp; ${touch ? 'tap outside to skip' : '[ESC] skip'}</div>
   `);
   node.appendChild(box);
-  box.addEventListener('click', () => game.advanceDialogue());
+  box.addEventListener('click', (e) => {
+    e.stopPropagation();
+    game.advanceDialogue();
+  });
+  // Backdrop skip still hands over the contact channels
+  node.addEventListener('click', () => {
+    if (!game.state.dialogue) return;
+    game.setState({ dialogue: null });
+    game.openPanel('contact');
+  });
 
   return {
     node,
@@ -391,7 +445,7 @@ function renderPanelBody(panelId) {
   if (panelId === 'projects') {
     return `
       <div class="panel__heading">RECOVERED CRAFT — PROJECT FILES</div>
-      <div class="panel__sub">Reverse-engineering reports. Each craft is one of your projects.</div>
+      <div class="panel__sub">Reverse-engineering reports. Accessing this terminal unseals the maintenance vent into SIGINT.</div>
       <div class="crate-grid">
         ${projects.map((p) => `
           <div class="crate">
@@ -422,7 +476,7 @@ function renderPanelBody(panelId) {
   if (panelId === 'about') {
     return `
       <div class="panel__heading">PERSONNEL FILE — EYES ONLY</div>
-      <div class="panel__sub">Paper dossier, pulled from the vault cabinets.</div>
+      <div class="panel__sub">Recovered with the Hangar-1 keycard. Dossier + clearance in one grab.</div>
       <div class="about-layout">
         <div class="about-photo">▣ PHOTO</div>
         <div class="about-bio">
@@ -430,6 +484,19 @@ function renderPanelBody(panelId) {
           <div class="about-stats">
             ${profile.stats.map((s) => `<div><div class="value">${s.value}</div>${s.label}</div>`).join('')}
           </div>
+        </div>
+      </div>
+    `;
+  }
+  if (panelId === 'arcade') {
+    return `
+      <div class="panel__heading">REC ROOM — INSERT COIN</div>
+      <div class="panel__sub">Playable side missions live here. Drop mini-games into this wing later — the cabinet is ready.</div>
+      <div class="arcade-card">
+        <div class="arcade-card__screen">◈ ATTRACT MODE</div>
+        <div class="arcade-card__copy">
+          <div class="name">COMING ONLINE</div>
+          <div class="meta">Shooting range is live · PP7 on the bench · more cabinets TBD</div>
         </div>
       </div>
     `;

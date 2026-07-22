@@ -78,6 +78,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .hud__intel .value { font-family: var(--display); font-weight: 700; font-size: 26px; color: var(--amber); line-height: 1; }
 .hud__intel .value .total { color: var(--muted); font-size: 16px; }
 .hud__intel .clearance { color: var(--muted); font-size: 10px; margin-top: 2px; }
+.hud__intel--tap { pointer-events: auto; cursor: pointer; padding: 4px 6px; border: 1px solid transparent; }
+.hud__intel--tap:active { border-color: var(--amber); background: rgba(10,11,13,.45); }
 
 /* Stats live under the sector readout (top-left) so the bottom stays clear for controls. */
 .hud__stats { position: absolute; top: 108px; left: 26px; display: flex; flex-direction: column; gap: 7px; width: 170px; }
@@ -88,8 +90,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .hud__stat .fill.amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
 .hud__stat .fill.pulse { animation: pulse 2.4s infinite; }
 
-/* Prompt floats just below the crosshair — clear of the stick and button clusters. */
-.hud__prompt { position: absolute; top: 58%; left: 50%; transform: translateX(-50%); text-align: center; }
+/* Prompt is a root-level overlay above the stick so taps always register. */
+.hud__prompt {
+  position: absolute; top: 52%; left: 50%; transform: translateX(-50%); text-align: center;
+  z-index: 36; pointer-events: none;
+}
 
 /* Objective guide — top center, points toward the next unvisited cache. */
 .hud__guide {
@@ -101,8 +106,13 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .hud__guide .arrow { color: var(--amber); font-size: 15px; margin-left: 8px; }
 .hud__guide .dist { color: var(--teal); font-size: 11px; margin-left: 6px; }
 .hud__prompt .box {
-  display: inline-block; border: 1px solid var(--teal); background: rgba(10,11,13,.72); padding: 8px 16px;
-  color: var(--light); font-size: 14px; letter-spacing: .08em; box-shadow: 0 0 14px rgba(47,212,198,.25); animation: pulse 1.6s infinite;
+  pointer-events: auto; cursor: pointer; display: inline-block;
+  border: 1px solid var(--teal); background: rgba(10,11,13,.78); padding: 10px 18px;
+  color: var(--light); font-size: 14px; letter-spacing: .08em; font-family: var(--mono);
+  box-shadow: 0 0 14px rgba(47,212,198,.25); animation: pulse 1.6s infinite;
+}
+.hud__prompt .box:hover, .hud__prompt .box:active {
+  background: rgba(47,212,198,.16); border-color: var(--amber);
 }
 .hud__prompt .key { color: var(--amber); }
 
@@ -256,18 +266,27 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .resume-info .name { color: var(--light); font-family: var(--display); font-size: 20px; }
 .resume-info .meta { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
 
+.arcade-card { border: 1px solid var(--line); background: var(--panel-bg); padding: 22px; display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.arcade-card__screen {
+  width: 140px; height: 110px; display: flex; align-items: center; justify-content: center;
+  background: repeating-linear-gradient(0deg, #06090c, #06090c 3px, #0d1218 3px, #0d1218 6px);
+  border: 1px solid var(--amber); color: var(--teal); letter-spacing: .14em; font-size: 12px;
+}
+.arcade-card__copy .name { color: var(--light); font-family: var(--display); font-size: 20px; }
+.arcade-card__copy .meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
 /* ===== GoldenEye / N64 stick controls (all devices) ===== */
 .n64-ui { position: absolute; inset: 0; z-index: 31; pointer-events: none; }
 
-/* Stick sits bottom-center like the middle prong of an N64 controller. */
+/* Stick bottom-left so the center prompt stays tappable. */
 .n64-stick-zone {
-  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
-  width: 300px; height: 230px;
+  position: absolute; left: 0; bottom: 0;
+  width: 220px; height: 220px;
   pointer-events: auto; touch-action: none; cursor: grab;
 }
 .n64-stick-zone:active { cursor: grabbing; }
 .n64-stick {
-  position: absolute; left: 50%; bottom: 54px; transform: translateX(-50%);
+  position: absolute; left: 28px; bottom: 36px;
   width: 132px; height: 132px;
   pointer-events: none; color: var(--teal);
   background: rgba(10,11,13,.55); border: 1px solid rgba(47,212,198,.35);
@@ -290,14 +309,13 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .n64-btn span { display: block; font-size: 9px; color: var(--muted2); margin-top: 2px; }
 .n64-btn.pressed { background: rgba(47,212,198,.25); transform: scale(.96); }
 
-/* Right-thumb arc: everything reachable one-handed from the bottom-right corner.
-   FIRE is the anchor (biggest, corner), AIM inward-left, USE above, SWAP inner. */
+/* Desktop face buttons — hidden entirely on touch (prompt tap + INTEL watch). */
 .n64-btn--fire { right: 16px; bottom: 86px; width: 76px; height: 76px; border-color: var(--amber); color: var(--amber); font-size: 16px; }
-.n64-btn--aim { right: 98px; bottom: 62px; width: 60px; height: 60px; border-color: #8ab4ff; color: #8ab4ff; }
-.n64-btn--aim.pressed { background: rgba(138,180,255,.25); box-shadow: 0 0 14px rgba(138,180,255,.45); }
 .n64-btn--interact { right: 26px; bottom: 182px; width: 62px; height: 62px; box-shadow: 0 0 14px rgba(47,212,198,.3); animation: pulse 1.6s infinite; }
 .n64-btn--cycle { right: 106px; bottom: 152px; width: 52px; height: 52px; border-color: var(--amber); color: var(--amber); }
 .n64-btn--watch { right: 22px; top: 130px; width: 46px; height: 46px; font-size: 17px; color: var(--teal); }
+.n64-ui--touch .n64-btn { display: none !important; }
+.n64-ui--touch .n64-item-label { right: auto; left: 28px; bottom: 18px; }
 
 .n64-item-label {
   position: absolute; right: 18px; bottom: 42px; pointer-events: none;
@@ -326,8 +344,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 /* ===== alien dialogue ===== */
 .dialogue {
-  position: absolute; inset: 0; z-index: 45; pointer-events: none;
+  position: absolute; inset: 0; z-index: 45; pointer-events: auto;
   display: flex; align-items: flex-end; justify-content: center; padding-bottom: 90px;
+  background: rgba(7, 8, 10, .28);
 }
 .dialogue__box {
   pointer-events: auto; cursor: pointer; max-width: 620px; margin: 0 20px;
@@ -361,17 +380,18 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .hud__intel .value { font-size: 20px; }
   .hud__stats { top: 92px; left: 14px; width: 128px; gap: 5px; }
   .hud__guide { top: 60px; font-size: 10px; padding: 4px 10px; }
+  .hud__prompt { top: 48%; }
+  .hud__prompt .box { font-size: 13px; padding: 12px 16px; }
   .hud__ticker { left: 0; right: 0; bottom: 0; border-bottom: none; }
-  .n64-stick-zone { width: 240px; height: 210px; }
-  .n64-stick { width: 116px; height: 116px; bottom: 64px; }
+  .n64-stick-zone { width: 190px; height: 190px; }
+  .n64-stick { width: 116px; height: 116px; left: 18px; bottom: 48px; }
   .n64-btn--fire { right: 12px; bottom: 96px; width: 68px; height: 68px; }
-  .n64-btn--aim { right: 86px; bottom: 70px; width: 54px; height: 54px; }
   .n64-btn--interact { right: 20px; bottom: 182px; width: 58px; height: 58px; }
   .n64-btn--cycle { right: 92px; bottom: 152px; width: 48px; height: 48px; }
   .n64-btn--watch { top: 96px; right: 14px; width: 42px; height: 42px; }
-  .n64-item-label { right: 14px; bottom: 48px; font-size: 10px; }
-  .dialogue { padding-bottom: 210px; }
+  .dialogue { padding-bottom: 120px; }
   .dialogue__line { font-size: 13px; }
   .watch__bezel { padding: 10px; }
   .watch__tabs { width: 110px; }
+  .panel-overlay { padding: 16px; align-items: flex-end; }
 }

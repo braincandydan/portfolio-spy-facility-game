@@ -12,37 +12,46 @@ const AMBER = 0xffb000;
 export const ITEM_IDS = {
   PISTOL: 'pistol',
   KEYCARD: 'keycard',
+  MASTERKEY: 'masterkey',
   CAMERA: 'camera',
 };
 
 /** Pickup spawn points in the facility. */
 export const PICKUP_DEFS = [
   {
-    id: ITEM_IDS.PISTOL,
-    name: 'PP7',
-    verb: 'TAKE',
-    position: { ...GUN_PICKUP_POSITION },
-  },
-  {
     id: ITEM_IDS.KEYCARD,
     name: 'KEYCARD',
     verb: 'TAKE',
-    // Archive wing — find this before unlocking the Records vault
-    position: { x: 6, y: 1, z: -34 },
+    // XENO-LAB docs table — unlocks Hangar-1
+    position: { x: 4.5, y: 1.35, z: 29.5 },
+  },
+  {
+    id: ITEM_IDS.MASTERKEY,
+    name: 'MASTER KEY',
+    verb: 'TAKE',
+    // SIGINT console bank — unlocks east exit + west REC ROOM
+    position: { x: 34, y: 1.1, z: 4 },
   },
   {
     id: ITEM_IDS.CAMERA,
     name: 'SPY CAM',
     verb: 'TAKE',
-    // Comms wing
-    position: { x: 4, y: 1, z: 34 },
+    // Near the alien cell
+    position: { x: -4, y: 1, z: 34 },
+  },
+  {
+    id: ITEM_IDS.PISTOL,
+    name: 'PP7',
+    verb: 'TAKE',
+    // REC ROOM shooting range (unlocked by master key)
+    position: { ...GUN_PICKUP_POSITION },
   },
 ];
 
-function addBobRing(THREE, group) {
+function addBobRing(THREE, group, color = ACCENT) {
   const ring = new THREE.Mesh(
     new THREE.RingGeometry(0.55, 0.62, 24),
-    new THREE.MeshBasicMaterial({ color: ACCENT, side: THREE.DoubleSide, transparent: true, opacity: 0.7 }),
+    new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.7 }),
   );
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = -0.9;
@@ -70,6 +79,31 @@ function buildProceduralKeycard(THREE) {
   );
   chip.position.set(-0.15, 0.01, -0.2);
   g.add(chip);
+  return g;
+}
+
+function buildProceduralMasterkey(THREE) {
+  const g = new THREE.Group();
+  // Thick key blank
+  const shank = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.08, 1.0),
+    new THREE.MeshLambertMaterial({ color: 0xc9a227, flatShading: true }),
+  );
+  shank.position.z = -0.15;
+  g.add(shank);
+  const head = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.28, 0.28, 0.1, 8),
+    new THREE.MeshLambertMaterial({ color: 0xe0b93a, flatShading: true }),
+  );
+  head.rotation.x = Math.PI / 2;
+  head.position.z = 0.45;
+  g.add(head);
+  const bit = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 0.08, 0.18),
+    new THREE.MeshBasicMaterial({ color: AMBER }),
+  );
+  bit.position.set(0.08, 0, -0.55);
+  g.add(bit);
   return g;
 }
 
@@ -111,6 +145,15 @@ function buildViewmodelKeycard(THREE) {
   return { group: g, muzzle: null };
 }
 
+function buildViewmodelMasterkey(THREE) {
+  const g = buildProceduralMasterkey(THREE);
+  g.scale.setScalar(0.4);
+  g.position.set(0.28, -0.28, -0.5);
+  g.rotation.set(0.35, -0.4, 0.15);
+  g.visible = false;
+  return { group: g, muzzle: null };
+}
+
 function buildViewmodelCamera(THREE) {
   const g = buildProceduralCamera(THREE);
   g.scale.setScalar(0.45);
@@ -138,7 +181,7 @@ export function buildItems(THREE, scene, assets = null) {
       if (fromAsset) {
         fromAsset.scale.setScalar(3.4);
         fromAsset.rotation.z = Math.PI / 10;
-        addBobRing(THREE, fromAsset);
+        addBobRing(THREE, fromAsset, AMBER);
         fromAsset.position.set(def.position.x, def.position.y, def.position.z);
         mesh = fromAsset;
       } else {
@@ -147,7 +190,13 @@ export function buildItems(THREE, scene, assets = null) {
     } else if (def.id === ITEM_IDS.KEYCARD) {
       const fromAsset = assets?.get('keycard')?.clone() || buildProceduralKeycard(THREE);
       fromAsset.scale.setScalar(fromAsset.scale.x === 1 ? 1.6 : fromAsset.scale.x);
-      addBobRing(THREE, fromAsset);
+      addBobRing(THREE, fromAsset, AMBER);
+      fromAsset.position.set(def.position.x, def.position.y, def.position.z);
+      mesh = fromAsset;
+    } else if (def.id === ITEM_IDS.MASTERKEY) {
+      const fromAsset = buildProceduralMasterkey(THREE);
+      fromAsset.scale.setScalar(1.5);
+      addBobRing(THREE, fromAsset, AMBER);
       fromAsset.position.set(def.position.x, def.position.y, def.position.z);
       mesh = fromAsset;
     } else if (def.id === ITEM_IDS.CAMERA) {
@@ -180,6 +229,7 @@ export function buildItems(THREE, scene, assets = null) {
     }
   }
   viewmodels[ITEM_IDS.KEYCARD] = buildViewmodelKeycard(THREE);
+  viewmodels[ITEM_IDS.MASTERKEY] = buildViewmodelMasterkey(THREE);
   {
     const fromAsset = assets?.get('camera')?.clone();
     if (fromAsset) {

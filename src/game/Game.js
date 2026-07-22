@@ -12,7 +12,7 @@ import {
 } from './n64Stick.js';
 import { loadAssets } from './assets.js';
 import {
-  ITEM_IDS, buildItems, updatePickups, nearestPickup, buildProceduralCrate,
+  ITEM_IDS, buildItems, updatePickups, nearestPickup, buildProceduralCrate, buildCoffeeCup,
 } from './items.js';
 
 const PITCH_LIMIT = 1.4;
@@ -20,6 +20,20 @@ const RECOIL_KICK = 0.05;
 const RECOIL_DECAY = 10;
 const PROXIMITY_RADIUS = 4;
 const AUTO_AIM_CONE = 0.22; // rad (~12.5°) — hip-fire snaps to targets inside this cone
+
+// Caffeine: drains over ~3 minutes; below the LOW threshold you slow down.
+const CAFFEINE_DRAIN = 100 / 180;
+const CAFFEINE_LOW = 30;
+const COFFEE_REFILL = 45;
+const COFFEE_RESPAWN_MS = 45000;
+const COFFEE_SPOTS = [
+  { x: 2.5, z: -3 },   // atrium
+  { x: -13, z: 0 },    // west corridor
+  { x: 0, z: 13 },     // south corridor
+  { x: 34, z: 6 },     // SIGINT lab
+  { x: -6, z: -30 },   // hangar
+];
+const GUIDE_ARROWS = ['↑', '↖', '←', '↙', '↓', '↘', '→', '↗'];
 
 /**
  * Owns the Three.js scene, GoldenEye-style single-stick controls, doors,
@@ -51,8 +65,12 @@ export class Game {
       aimCross: { x: 0, y: 0 },
       lockMsg: null,
       dialogue: null, // { speaker, lines, idx }
+      caffeine: 100,
+      stickWear: 0, // 0..100, fed by the joystick UI
+      guide: null, // { name, plain, arrow, dist } → next unvisited objective
       err: null,
     };
+    this._caff = 100;
     this._listeners = new Set();
     this._last = {};
     this.keys = {};
@@ -140,6 +158,14 @@ export class Game {
       this._raycaster = new THREE.Raycaster();
       this._muzzle = null;
 
+      // Coffee stations
+      this._coffees = COFFEE_SPOTS.map((spot) => {
+        const mesh = buildCoffeeCup(THREE);
+        mesh.position.set(spot.x, 1.0, spot.z);
+        scene.add(mesh);
+        return { spot, mesh, active: true, respawnAt: 0 };
+      });
+
       this._clock = new THREE.Clock();
       this._alive = true;
       this._loop();
@@ -208,6 +234,7 @@ export class Game {
         this._updateMove(dt, stick);
       }
       this._updateZones();
+      this._updateCaffeine(dt);
       this._doors?.update(dt, this.px, this.pz, this.state.inventory.includes(ITEM_IDS.KEYCARD));
     }
 
@@ -237,11 +264,12 @@ export class Game {
     // Turn from stick X
     this.yaw -= stick.turn * TURN_RATE * (this.state.sens / 2.2) * dt;
 
-    // Walk from stick Y
+    // Walk from stick Y — under-caffeinated operatives are slow
     if (Math.abs(stick.walk) > 0.001) {
+      const caffFactor = 0.6 + 0.4 * Math.min(1, this._caff / CAFFEINE_LOW);
       const f = this.yaw;
       const fx = -Math.sin(f), fz = -Math.cos(f);
-      const speed = WALK_SPEED * stick.walk * dt;
+      const speed = WALK_SPEED * caffFactor * stick.walk * dt;
       const dx = fx * speed, dz = fz * speed;
       if (isWalkable(this.px + dx, this.pz)) this.px += dx;
       if (isWalkable(this.px, this.pz + dz)) this.pz += dz;
@@ -250,6 +278,40 @@ export class Game {
       this.pitch *= Math.exp(-dt * PITCH_RECENTER);
     }
   }
+
+  _updateCaffeine(dt) {
+    this._caff = Math.max(0, this._caff - CAFFEINE_DRAIN * dt);
+
+    const now = performance.now();
+    for (const c of this._coffees || []) {
+      if (!c.active) {
+        if (now >= c.respawnAt) { c.active = true; c.mesh.visible = true; }
+        continue;
+      }
+      // idle animation
+      c.mesh.position.y = 1.0 + Math.sin(now / 500 + c.spot.x) * 0.1;
+      c.mesh.rotation.y += dt * 1.2;
+      if (c.mesh.userData.steam) c.mesh.userData.steam.rotation.y += dt * 2.5;
+      // walk-over pickup
+      if (Math.hypot(this.px - c.spot.x, this.pz - c.spot.z) < 1.4) {
+        c.active = false;
+        c.mesh.visible = false;
+        c.respawnAt = now + COFFEE_RESPAWN_MS;
+        this._caff = Math.min(100, this._caff + COFFEE_REFILL);
+        this.audio.blip(880);
+        setTimeout(() => this.audio.blip(1100), 80);
+      }
+    }
+
+    const rounded = Math.round(this._caff);
+    if (rounded !== this.state.caffeine) this.setState({ caffeine: rounded });
+  }
+
+  /** Joystick UI reports spring wear here (0..1). */
+  setStickWear = (wear) => {
+    const v = Math.round(wear * 20) * 5; // 5% steps to avoid re-render spam
+    if (v !== this.state.stickWear) this.setState({ stickWear: v });
+  };
 
   _updateAim(dt, stick) {
     // Stick drives crosshair inside aim box; pushing past the edge turns/pitches
@@ -312,16 +374,38 @@ export class Game {
 
     const area = areaAt(this.px, this.pz);
     const coords = `${this.px >= 0 ? '+' : ''}${this.px.toFixed(1)} · ${this.pz >= 0 ? '+' : ''}${this.pz.toFixed(1)}`;
-    const prompt = near ? { zone: near.id, name: near.name, verb: nearVerb } : null;
+    const prompt = near
+      ? { zone: near.id, name: near.plain ? `${near.name} · ${near.plain}` : near.name, verb: nearVerb }
+      : null;
+
+    // Guide: point at the nearest objective you haven't recovered yet
+    let guide = null;
+    {
+      let best = null, bd = Infinity;
+      for (const z of ZONES) {
+        if (this.state.objectives[z.id]) continue;
+        const d = Math.hypot(this.px - z.target[0], this.pz - z.target[1]);
+        if (d < bd) { bd = d; best = z; }
+      }
+      if (best) {
+        const yawTo = Math.atan2(-(best.target[0] - this.px), -(best.target[1] - this.pz));
+        let rel = yawTo - this.yaw;
+        while (rel > Math.PI) rel -= Math.PI * 2;
+        while (rel < -Math.PI) rel += Math.PI * 2;
+        const idx = ((Math.round(rel / (Math.PI / 4)) % 8) + 8) % 8;
+        guide = { plain: best.plain, arrow: GUIDE_ARROWS[idx], dist: Math.round(bd) };
+      }
+    }
 
     const patch = {};
     if (this._last.area !== area) patch.area = area;
     if (this._last.coords !== coords) patch.coords = coords;
     if (JSON.stringify(this._last.prompt) !== JSON.stringify(prompt)) patch.prompt = prompt;
     if (this._last.lockMsg !== lockMsg) patch.lockMsg = lockMsg;
+    if (JSON.stringify(this._last.guide) !== JSON.stringify(guide)) patch.guide = guide;
 
     if (Object.keys(patch).length) {
-      this._last = { area, coords, prompt, lockMsg };
+      this._last = { area, coords, prompt, lockMsg, guide };
       this.setState(patch);
     }
   }

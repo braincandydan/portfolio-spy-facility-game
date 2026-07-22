@@ -89,27 +89,29 @@ function buildHud(game) {
 
   const stats = el('div', 'hud__stats', `
     <div class="hud__stat">
-      <div class="row"><span>MORALE</span><span>82</span></div>
-      <div class="bar"><div class="fill teal" style="width:82%"></div></div>
+      <div class="row"><span>CAFFEINE</span><span data-caff-val></span></div>
+      <div class="bar"><div class="fill amber" data-caff-fill></div></div>
     </div>
     <div class="hud__stat">
-      <div class="row"><span>CAFFEINE</span><span>64</span></div>
-      <div class="bar"><div class="fill amber" style="width:64%"></div></div>
-    </div>
-    <div class="hud__stat">
-      <div class="row"><span>SIGNAL</span><span>SYNC</span></div>
-      <div class="bar"><div class="fill teal pulse" style="width:91%"></div></div>
+      <div class="row"><span>STICK SPRING</span><span data-stick-val></span></div>
+      <div class="bar"><div class="fill teal" data-stick-fill></div></div>
     </div>
   `);
   node.appendChild(stats);
+
+  const guide = el('div', 'hud__guide hidden', `
+    <span class="label">NEXT ▸</span> <span data-guide-name></span>
+    <span class="arrow" data-guide-arrow></span><span class="dist" data-guide-dist></span>
+  `);
+  node.appendChild(guide);
 
   const prompt = el('div', 'hud__prompt hidden', `
     <div class="box">◉ <span class="key">[E]</span> — <span data-prompt-verb></span> <span data-prompt-name></span></div>
   `);
   node.appendChild(prompt);
 
-  const navHint = 'stick or arrows/WASD to move &nbsp;·&nbsp; hold [R] to aim &nbsp;·&nbsp; [Z] fire &nbsp;·&nbsp; [E] use &nbsp;·&nbsp; [C] swap gadgets &nbsp;·&nbsp; [TAB] watch';
-  const tickerText = `<span class="tag">◆ OBJECTIVE</span> — infiltrate the facility &nbsp;·&nbsp; recover all 5 intel caches &nbsp;·&nbsp; access the DOSSIER for extraction papers &nbsp;·&nbsp; ${navHint} &nbsp;·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
+  const navHint = 'stick or arrows/WASD to move &nbsp;·&nbsp; [R] aim &nbsp;·&nbsp; [Z] fire &nbsp;·&nbsp; [E] use &nbsp;·&nbsp; [C] swap &nbsp;·&nbsp; [TAB] watch';
+  const tickerText = `<span class="tag">◆ OBJECTIVE</span> — recover all 5 intel caches (projects · skills · about · contact · resume) &nbsp;·&nbsp; follow the NEXT ▸ guide &nbsp;·&nbsp; grab ☕ coffee to stay caffeinated or you'll slow down &nbsp;·&nbsp; rest the stick when the spring wears out &nbsp;·&nbsp; ${navHint} &nbsp;·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
   const ticker = el('div', 'hud__ticker', `<div class="track">${tickerText}${tickerText}</div>`);
   node.appendChild(ticker);
 
@@ -131,6 +133,25 @@ function buildHud(game) {
       if (hasPrompt) {
         prompt.querySelector('[data-prompt-verb]').textContent = state.prompt.verb || 'ACCESS';
         prompt.querySelector('[data-prompt-name]').textContent = state.prompt.name;
+      }
+
+      // caffeine + stick wear meters
+      const caff = state.caffeine ?? 100;
+      stats.querySelector('[data-caff-val]').textContent = caff <= 30 ? `${caff} ▼ LOW` : caff;
+      const caffFill = stats.querySelector('[data-caff-fill]');
+      caffFill.style.width = `${caff}%`;
+      caffFill.classList.toggle('pulse', caff <= 30);
+      const spring = 100 - (state.stickWear ?? 0);
+      stats.querySelector('[data-stick-val]').textContent = spring <= 40 ? `${spring} ▼ SPONGY` : spring;
+      stats.querySelector('[data-stick-fill]').style.width = `${spring}%`;
+
+      // objective guide (always visible during gameplay — it's the main breadcrumb)
+      const showGuide = !!(state.guide && state.active);
+      guide.classList.toggle('hidden', !showGuide);
+      if (showGuide) {
+        guide.querySelector('[data-guide-name]').textContent = state.guide.plain;
+        guide.querySelector('[data-guide-arrow]').textContent = state.guide.arrow;
+        guide.querySelector('[data-guide-dist]').textContent = `${state.guide.dist}m`;
       }
     },
   };

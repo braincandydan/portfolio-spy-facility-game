@@ -225,3 +225,54 @@ export function buildProceduralCrate(THREE, size = 1.4) {
   const c = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), mat);
   return c;
 }
+
+/** Break-room coffee: walk over it to drink. Floats and steams like the intel pickups. */
+export function buildCoffeeCup(THREE) {
+  const g = new THREE.Group();
+  const cup = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.22, 0.17, 0.34, 10),
+    new THREE.MeshLambertMaterial({ color: 0xd8dce2, flatShading: true }),
+  );
+  g.add(cup);
+  const coffee = new THREE.Mesh(
+    new THREE.CircleGeometry(0.19, 10),
+    new THREE.MeshBasicMaterial({ color: 0x3a2417 }),
+  );
+  coffee.rotation.x = -Math.PI / 2;
+  coffee.position.y = 0.176;
+  g.add(coffee);
+  const handle = new THREE.Mesh(
+    new THREE.TorusGeometry(0.1, 0.03, 6, 10, Math.PI),
+    new THREE.MeshLambertMaterial({ color: 0xd8dce2, flatShading: true }),
+  );
+  handle.position.set(0.22, 0, 0);
+  handle.rotation.z = -Math.PI / 2;
+  g.add(handle);
+  // "steam" wisp
+  const steam = new THREE.Mesh(
+    new THREE.TorusGeometry(0.07, 0.015, 5, 8, Math.PI * 1.2),
+    new THREE.MeshBasicMaterial({ color: 0xe8ebf0, transparent: true, opacity: 0.5 }),
+  );
+  steam.position.y = 0.38;
+  steam.rotation.y = Math.PI / 3;
+  g.add(steam);
+  g.userData.steam = steam;
+  // amber pickup ring
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(0.4, 0.47, 20),
+    new THREE.MeshBasicMaterial({ color: 0xffb000, side: THREE.DoubleSide, transparent: true, opacity: 0.65 }),
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = -0.55;
+  g.add(ring);
+  g.userData.ring = ring;
+  // soft beacon beam so it reads from across the room
+  const beam = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.16, 3.2, 8, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0xffb000, transparent: true, opacity: 0.14, side: THREE.DoubleSide, depthWrite: false }),
+  );
+  beam.position.y = 1.2;
+  g.add(beam);
+  g.scale.setScalar(1.5);
+  return g;
+}

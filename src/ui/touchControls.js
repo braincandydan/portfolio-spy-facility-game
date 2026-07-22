@@ -62,49 +62,121 @@ export function mountN64Controls(root, game) {
 
   root.appendChild(wrap);
 
-  // ---- stick via pointer events ----
+  // ---- stick: pointer lock (mouse), spring snap-back, and N64 wear ----
+  //
+  // vx/vy = knob offset in px (screen space, +y down). While held, the pointer
+  // drives it directly; on release a damped spring pulls it home. Heavy use
+  // builds `wear` (0..1): the spring gets spongy (slower, wobblier) and the
+  // stick loses authority — rest it to let it recover, like a real N64 stick.
   let stickPointerId = null;
-  const stickRect = () => stickWrap.getBoundingClientRect();
+  let held = false;
+  let vx = 0, vy = 0;
+  let svx = 0, svy = 0; // spring velocity
+  let wear = 0;
 
-  const setKnob = (nx, ny) => {
-    knob.style.transform = `translate(calc(-50% + ${nx * JOY_RADIUS}px), calc(-50% + ${-ny * JOY_RADIUS}px))`;
-    game.setJoystick(nx, ny);
+  const clampStick = () => {
+    const m = Math.hypot(vx, vy);
+    if (m > JOY_RADIUS) { vx *= JOY_RADIUS / m; vy *= JOY_RADIUS / m; }
   };
 
-  const readStick = (clientX, clientY) => {
-    const r = stickRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    let dx = (clientX - cx) / JOY_RADIUS;
-    let dy = -(clientY - cy) / JOY_RADIUS;
-    const mag = Math.hypot(dx, dy);
-    if (mag > 1) { dx /= mag; dy /= mag; }
-    setKnob(dx, dy);
+  const applyStick = () => {
+    const authority = 1 - 0.35 * wear; // worn stick pushes less
+    game.setJoystick((vx / JOY_RADIUS) * authority, (-vy / JOY_RADIUS) * authority);
+    knob.style.transform = `translate(calc(-50% + ${vx}px), calc(-50% + ${vy}px))`;
+    // knob tint: teal (fresh) → amber → red (worn out)
+    const hue = 172 - wear * 140;
+    knob.style.background = `hsla(${hue}, 70%, 50%, .4)`;
+    knob.style.borderColor = `hsl(${hue}, 72%, 55%)`;
+    knob.style.boxShadow = `0 0 10px hsla(${hue}, 70%, 50%, .35)`;
+  };
+
+  const isLocked = () => document.pointerLockElement === stickZone;
+
+  const readAbsolute = (clientX, clientY) => {
+    const r = stickWrap.getBoundingClientRect();
+    vx = clientX - (r.left + r.width / 2);
+    vy = clientY - (r.top + r.height / 2);
+    clampStick();
   };
 
   stickZone.addEventListener('pointerdown', (e) => {
     if (stickPointerId !== null) return;
     e.preventDefault();
     stickPointerId = e.pointerId;
+    held = true;
+    svx = 0; svy = 0;
     stickZone.setPointerCapture(e.pointerId);
     stickWrap.classList.add('active');
-    readStick(e.clientX, e.clientY);
+    readAbsolute(e.clientX, e.clientY);
+    applyStick();
+    // Lock the mouse cursor to the stick so you can't drag out of the window
+    if (e.pointerType === 'mouse' && stickZone.requestPointerLock) {
+      try {
+        const p = stickZone.requestPointerLock();
+        if (p && p.catch) p.catch(() => {});
+      } catch { /* best-effort */ }
+    }
   });
 
   stickZone.addEventListener('pointermove', (e) => {
     if (e.pointerId !== stickPointerId) return;
     e.preventDefault();
-    readStick(e.clientX, e.clientY);
+    if (isLocked()) {
+      vx += e.movementX;
+      vy += e.movementY;
+      clampStick();
+    } else {
+      readAbsolute(e.clientX, e.clientY);
+    }
+    applyStick();
   });
 
   const endStick = (e) => {
     if (e.pointerId !== stickPointerId) return;
     stickPointerId = null;
+    held = false;
     stickWrap.classList.remove('active');
-    setKnob(0, 0);
+    if (isLocked()) {
+      try { document.exitPointerLock(); } catch { /* noop */ }
+    }
+    // spring takes over from here (see tick loop)
   };
   stickZone.addEventListener('pointerup', endStick);
   stickZone.addEventListener('pointercancel', endStick);
+
+  // Spring + wear simulation
+  let lastTick = performance.now();
+  const tick = (now) => {
+    const dt = Math.min(0.05, (now - lastTick) / 1000);
+    lastTick = now;
+
+    const deflection = Math.hypot(vx, vy) / JOY_RADIUS;
+    if (held) {
+      // ~45s of full-tilt use to wear the spring out completely
+      wear = Math.min(1, wear + deflection * dt / 45);
+      applyStick(); // keep authority/tint in sync while held
+    } else {
+      // resting: spring home + recover (~15s to full)
+      wear = Math.max(0, wear - dt / 15);
+      if (vx !== 0 || vy !== 0 || svx !== 0 || svy !== 0) {
+        // Semi-implicit Euler spring. Fresh stick: stiff + damped = crisp snap.
+        // Worn stick: soft + underdamped = slow, wobbly return.
+        const k = 200 - 150 * wear;
+        const c = 16 - 12 * wear;
+        svx += (-k * vx - c * svx) * dt;
+        svy += (-k * vy - c * svy) * dt;
+        vx += svx * dt;
+        vy += svy * dt;
+        if (Math.hypot(vx, vy) < 0.6 && Math.hypot(svx, svy) < 4) {
+          vx = 0; vy = 0; svx = 0; svy = 0;
+        }
+        applyStick(); // the wobble feeds movement — authentically spongy
+      }
+    }
+    game.setStickWear?.(wear);
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 
   // ---- buttons ----
   watchBtn.addEventListener('click', (e) => { e.preventDefault(); game.toggleWatch(); });

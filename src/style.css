@@ -90,6 +90,16 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 /* Prompt floats just below the crosshair — clear of the stick and button clusters. */
 .hud__prompt { position: absolute; top: 58%; left: 50%; transform: translateX(-50%); text-align: center; }
+
+/* Objective guide — top center, points toward the next unvisited cache. */
+.hud__guide {
+  position: absolute; top: 26px; left: 50%; transform: translateX(-50%);
+  border: 1px solid var(--line); background: rgba(10,11,13,.6); padding: 6px 14px;
+  font-size: 12px; letter-spacing: .1em; color: var(--light); white-space: nowrap;
+}
+.hud__guide .label { color: var(--muted); font-size: 10px; }
+.hud__guide .arrow { color: var(--amber); font-size: 15px; margin-left: 8px; }
+.hud__guide .dist { color: var(--teal); font-size: 11px; margin-left: 6px; }
 .hud__prompt .box {
   display: inline-block; border: 1px solid var(--teal); background: rgba(10,11,13,.72); padding: 8px 16px;
   color: var(--light); font-size: 14px; letter-spacing: .08em; box-shadow: 0 0 14px rgba(47,212,198,.25); animation: pulse 1.6s infinite;
@@ -350,6 +360,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .hud__intel { top: 14px; right: 14px; }
   .hud__intel .value { font-size: 20px; }
   .hud__stats { top: 92px; left: 14px; width: 128px; gap: 5px; }
+  .hud__guide { top: 60px; font-size: 10px; padding: 4px 10px; }
   .hud__ticker { left: 0; right: 0; bottom: 0; border-bottom: none; }
   .n64-stick-zone { width: 240px; height: 210px; }
   .n64-stick { width: 116px; height: 116px; bottom: 64px; }

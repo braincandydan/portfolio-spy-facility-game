@@ -2,14 +2,22 @@
 // Extend this to add rooms — closed gates carve holes out of walkability.
 
 export const ZONES = [
-  { id: 'projects', name: 'CRAFT ANALYSIS', hud: 'HANGAR-1', target: [0, -28], color: '#ffb000', verb: 'ACCESS' },
-  { id: 'skills', name: 'SIGINT ARCHIVE', hud: 'SIGINT', target: [28, 0], color: '#2fd4c6', verb: 'ACCESS' },
-  { id: 'contact', name: 'SUBJECT J-RÖD', hud: 'XENO-LAB', target: [0, 28], color: '#2fd4c6', verb: 'TALK TO' },
-  { id: 'about', name: 'PERSONNEL VAULT', hud: 'VAULT', target: [-28, 0], color: '#ffb000', verb: 'ACCESS' },
-  { id: 'resume', name: 'DATA CORE', hud: 'S4 CORE', target: [0, 3], color: '#2fd4c6', verb: 'ACCESS' },
+  { id: 'projects', name: 'CRAFT ANALYSIS', plain: 'MY PROJECTS', hud: 'HANGAR-1', target: [0, -28], color: '#ffb000', verb: 'ACCESS' },
+  { id: 'skills', name: 'SIGINT ARCHIVE', plain: 'MY SKILLS', hud: 'SIGINT', target: [28, 0], color: '#2fd4c6', verb: 'ACCESS' },
+  { id: 'contact', name: 'SUBJECT J-RÖD', plain: 'CONTACT ME', hud: 'XENO-LAB', target: [0, 28], color: '#2fd4c6', verb: 'TALK TO' },
+  { id: 'about', name: 'PERSONNEL VAULT', plain: 'ABOUT ME', hud: 'VAULT', target: [-28, 0], color: '#ffb000', verb: 'ACCESS' },
+  { id: 'resume', name: 'DATA CORE', plain: 'MY RESUME', hud: 'S4 CORE', target: [0, 3], color: '#2fd4c6', verb: 'ACCESS' },
 ];
 
 export const ZONE_ORDER = ['projects', 'skills', 'about', 'contact', 'resume'];
+
+export const ZONE_PLAIN = {
+  projects: 'MY PROJECTS',
+  skills: 'MY SKILLS',
+  about: 'ABOUT ME',
+  contact: 'CONTACT ME',
+  resume: 'MY RESUME',
+};
 
 export const ZONE_NAMES = {
   projects: 'HANGAR-1 — CRAFT ANALYSIS',
@@ -20,11 +28,11 @@ export const ZONE_NAMES = {
 };
 
 export const ZONE_SUBS = {
-  projects: 'north · hangar-1',
-  skills: 'east · sigint',
-  contact: 'south · xeno-lab',
-  about: 'west · vault',
-  resume: 'atrium · core',
+  projects: 'north · my projects',
+  skills: 'east · my skills',
+  contact: 'south · contact me',
+  about: 'west · about me',
+  resume: 'atrium · my resume',
 };
 
 // Extra interactable: briefing monitor in the SIGINT lab (not an objective)

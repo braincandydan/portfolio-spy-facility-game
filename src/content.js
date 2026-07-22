@@ -1,18 +1,18 @@
 // Edit this file to make the portfolio yours. Nothing here touches engine code.
 
 export const profile = {
-  name: '[ YOUR NAME ]',
-  codename: 'CODENAME · TITLE / ROLE',
-  bio: 'Placeholder biography. Two or three sentences about who you are, what you build, and what you’re looking for. Keep the spy flavor or make it your own — this whole file is yours to overwrite.',
+  name: 'DANIEL DONNELLY',
+  codename: 'DEVELOPER · DESIGNER · TINKERER',
+  bio: 'Field asset operating out of Kelowna, BC. Builds systems, wires up integrations, and keeps operations running when the pressure is on. Equally comfortable designing the interface and rewiring what\u2019s behind it — if it\u2019s broken, half-built, or "impossible", that\u2019s the assignment he takes.',
   stats: [
-    { value: '6+', label: 'YEARS FIELD' },
-    { value: '40+', label: 'OPS RUN' },
+    { value: '10+', label: 'YEARS TINKERING' },
+    { value: '100+', label: 'SYSTEMS WIRED' },
     { value: '∞', label: 'COFFEE' },
   ],
   resume: {
     label: 'RESUME.PDF',
     meta: 'Latest — 1 page · updated on drop-in',
-    href: '#',
+    href: '#', // drop resume.pdf into public/ and change this to 'resume.pdf'
   },
   cv: {
     href: '#',
@@ -20,10 +20,11 @@ export const profile = {
 };
 
 export const comms = [
-  { icon: '✉', label: 'EMAIL', value: 'you@example.com', href: 'mailto:you@example.com' },
-  { icon: '◇', label: 'GITHUB', value: '/your-handle', href: '#' },
+  { icon: '✉', label: 'EMAIL', value: 'braincandydan@gmail.com', href: 'mailto:braincandydan@gmail.com' },
+  { icon: '☏', label: 'PHONE', value: '250-808-7129', href: 'tel:+12508087129' },
+  { icon: '◇', label: 'GITHUB', value: '/braincandydan', href: 'https://github.com/braincandydan' },
   { icon: '▤', label: 'LINKEDIN', value: '/in/your-name', href: '#' },
-  { icon: '✦', label: 'X / TWITTER', value: '@your-handle', href: '#' },
+  { icon: '◈', label: 'BASE', value: 'Kelowna, BC — Canada', href: '#' },
 ];
 
 export const projects = [
@@ -34,10 +35,10 @@ export const projects = [
 ];
 
 export const skills = [
-  { name: 'Frontend / UI', lvl: 'EXPERT', pct: 92 },
-  { name: 'Backend / APIs', lvl: 'ADVANCED', pct: 84 },
-  { name: '3D / WebGL', lvl: 'ADVANCED', pct: 78 },
-  { name: 'Design Systems', lvl: 'EXPERT', pct: 88 },
-  { name: 'DevOps / Cloud', lvl: 'PROFICIENT', pct: 70 },
-  { name: 'Motion / Interaction', lvl: 'ADVANCED', pct: 80 },
+  { name: 'Problem Solving', lvl: 'EXPERT', pct: 94 },
+  { name: 'Systems', lvl: 'EXPERT', pct: 90 },
+  { name: 'Integrations', lvl: 'ADVANCED', pct: 86 },
+  { name: 'Development', lvl: 'ADVANCED', pct: 84 },
+  { name: 'Design', lvl: 'ADVANCED', pct: 82 },
+  { name: 'Operations', lvl: 'ADVANCED', pct: 80 },
 ];

@@ -1,5 +1,9 @@
-// Tiny WebAudio blip engine — a soft hum bed plus square-wave UI blips.
-// No samples/assets needed, keeps the bundle tiny.
+// Tiny WebAudio blip engine — a soft hum bed plus square-wave UI blips —
+// plus a looping background music track. No samples needed for the SFX,
+// keeps the bundle tiny; music is the one real asset, relative path so it
+// works under GitHub Pages subpaths (vite base './').
+const MUSIC_URL = 'audio/spySong.mp3';
+const MUSIC_VOLUME = 0.35;
 
 export class AudioEngine {
   constructor({ enabled = true } = {}) {
@@ -7,6 +11,7 @@ export class AudioEngine {
     this.soundOn = true;
     this.ctx = null;
     this.amp = null;
+    this.music = null;
   }
 
   init() {
@@ -30,11 +35,24 @@ export class AudioEngine {
     } catch {
       // audio is optional; silently degrade
     }
+
+    try {
+      this.music = new Audio(MUSIC_URL);
+      this.music.loop = true;
+      this.music.volume = MUSIC_VOLUME;
+      if (this.enabled && this.soundOn) this.music.play().catch(() => {});
+    } catch {
+      this.music = null;
+    }
   }
 
   setSoundOn(on) {
     this.soundOn = on;
     if (this.amp) this.amp.gain.value = on ? 0.04 : 0;
+    if (this.music) {
+      if (on) this.music.play().catch(() => {});
+      else this.music.pause();
+    }
   }
 
   blip(freq) {

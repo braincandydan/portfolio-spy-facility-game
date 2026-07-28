@@ -122,6 +122,12 @@ const BLOCKED_CIRCLES = [
 // rect shape as door gates.
 const BLOCKED_RECTS = [
   [3.2, 5.8, 28.75, 30.25], // Personnel dossier reading table (XENO-LAB)
+  // Arcade cabinet (REC ROOM) — buildRecRoom's cab body is a 1.3x2.1x1.0 box
+  // centered at (-32, 0), the same spot as ARCADE_POINT, sitting dead-center
+  // in the west corridor's walk line. With no collision the player walked
+  // straight through it into the cabinet's solid mesh (which spans floor to
+  // above head height) on the way to the couch/shooting range beyond.
+  [-32.65, -31.35, -0.5, 0.5],
 ];
 
 function isInsideProp(x, z, radius) {

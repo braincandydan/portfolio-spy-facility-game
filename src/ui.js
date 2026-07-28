@@ -231,16 +231,24 @@ function buildBoot(game) {
     <div class="boot__title" data-title></div>
     <div class="boot__subtitle">P O R T F O L I O</div>
     <div class="boot__rule"></div>
-    <div class="boot__cta">▶ ${touch ? 'TAP' : 'CLICK'} TO INSERT CARTRIDGE</div>
+    <div class="boot__cta" data-cta>▶ ${touch ? 'TAP' : 'CLICK'} TO INSERT CARTRIDGE</div>
     <div class="boot__keys">${keysLine}</div>
     <div class="boot__err hidden" data-err></div>
   `);
   node.addEventListener('click', game.start);
   decryptText(node.querySelector('[data-title]'), 'DAN DONNELLY');
+  const ctaNode = node.querySelector('[data-cta]');
   return {
     node,
     update(state) {
       node.classList.toggle('hidden', state.booted);
+      if (state.pendingStart && !state.err) {
+        ctaNode.textContent = '◌ LOADING FACILITY…';
+        ctaNode.classList.add('boot__cta--loading');
+      } else {
+        ctaNode.textContent = `▶ ${touch ? 'TAP' : 'CLICK'} TO INSERT CARTRIDGE`;
+        ctaNode.classList.remove('boot__cta--loading');
+      }
       const errNode = node.querySelector('[data-err]');
       errNode.classList.toggle('hidden', !state.err);
       if (state.err) errNode.textContent = state.err;

@@ -51,6 +51,8 @@ export class Game {
     this.audio = new AudioEngine({ enabled: enableSound });
 
     this.state = {
+      ready: false, // assets/scene finished loading — start() can enter gameplay
+      pendingStart: false, // user clicked boot screen before `ready`, waiting on it
       booted: false,
       active: false,
       showWatch: false,
@@ -172,6 +174,9 @@ export class Game {
       this._clock = new THREE.Clock();
       this._alive = true;
       this._loop();
+
+      this.setState({ ready: true });
+      if (this.state.pendingStart) this._enterGameplay();
     } catch (e) {
       this.setState({ err: `Renderer failed to load (${e.message}). Check network / retry.` });
     }
@@ -494,8 +499,19 @@ export class Game {
   };
 
   start = () => {
-    this.audio.init();
-    this.setState({ booted: true, active: true });
+    if (this.state.booted) return;
+    this.audio.init(); // must run on this user gesture regardless of load state
+    if (!this.state.ready) {
+      this.setState({ pendingStart: true });
+      return;
+    }
+    this._enterGameplay();
+  };
+
+  // Shared by start() (once assets are already ready) and init()'s completion
+  // (when the player clicked before loading finished).
+  _enterGameplay = () => {
+    this.setState({ booted: true, active: true, pendingStart: false });
     this.audio.blip(660);
   };
 

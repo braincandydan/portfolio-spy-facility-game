@@ -1,6 +1,7 @@
 // Universal GoldenEye-style controls: one N64 stick (pointer events — works with
-// mouse and touch). On touch devices the face buttons are hidden — interact via
-// the HUD prompt tap instead. Desktop keeps FIRE / USE / SWAP / WATCH.
+// mouse and touch). On touch devices WATCH and INTERACT are hidden (INTEL tab /
+// prompt tap cover those), but FIRE and SWAP have no other input path, so they
+// stay visible and state-driven on touch same as desktop.
 
 export function isTouchDevice() {
   return ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || (window.matchMedia?.('(pointer: coarse)').matches ?? false);
@@ -159,12 +160,11 @@ export function mountN64Controls(root, game) {
   game.subscribe((state) => {
     const gameplay = state.booted && state.active && !state.dialogue;
     wrap.classList.toggle('hidden', !(state.booted && state.active));
-    // On touch, face buttons stay hidden — prompt tap handles interact.
-    if (!touch) {
-      interactBtn.classList.toggle('hidden', !(gameplay && state.prompt));
-      cycleBtn.classList.toggle('hidden', !(gameplay && state.inventory.length > 1));
-      fireBtn.classList.toggle('hidden', !(gameplay && state.activeItem));
-    }
+    // FIRE/SWAP need to reflect game state on touch too — only WATCH/INTERACT are
+    // permanently hidden there (CSS) since prompt-tap and the INTEL tab cover them.
+    if (!touch) interactBtn.classList.toggle('hidden', !(gameplay && state.prompt));
+    cycleBtn.classList.toggle('hidden', !(gameplay && state.inventory.length > 1));
+    fireBtn.classList.toggle('hidden', !(gameplay && state.activeItem));
 
     if (gameplay && state.activeItem) {
       itemLabel.classList.remove('hidden');

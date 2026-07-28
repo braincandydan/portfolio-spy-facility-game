@@ -148,6 +148,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .boot__subtitle { font-family: var(--display); font-weight: 400; font-size: clamp(18px, 2.6vw, 30px); color: var(--teal); letter-spacing: .42em; margin-top: 2px; }
 .boot__rule { width: min(520px, 74vw); height: 1px; background: linear-gradient(90deg, transparent, var(--teal), transparent); margin: 26px 0; }
 .boot__cta { border: 1px solid var(--teal); padding: 12px 30px; color: var(--light); font-size: 15px; letter-spacing: .12em; animation: pulse 1.8s infinite; }
+.boot__cta--loading { border-color: var(--amber); color: var(--amber); animation: pulse .9s infinite; }
 .boot__keys { color: var(--muted); font-size: 12px; margin-top: 26px; line-height: 1.8; }
 .boot__err { color: var(--red); font-size: 12px; margin-top: 16px; max-width: 60ch; }
 
@@ -314,12 +315,14 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .n64-btn span { display: block; font-size: 9px; color: var(--muted2); margin-top: 2px; }
 .n64-btn.pressed { background: rgba(47,212,198,.25); transform: scale(.96); }
 
-/* Desktop face buttons — hidden entirely on touch (prompt tap + INTEL watch). */
+/* FIRE / SWAP have no other input path on touch, so they stay visible there too.
+   INTERACT (prompt tap) and WATCH (INTEL tab) have touch equivalents elsewhere. */
 .n64-btn--fire { right: 16px; bottom: 86px; width: 76px; height: 76px; border-color: var(--amber); color: var(--amber); font-size: 16px; }
 .n64-btn--interact { right: 26px; bottom: 182px; width: 62px; height: 62px; box-shadow: 0 0 14px rgba(47,212,198,.3); animation: pulse 1.6s infinite; }
 .n64-btn--cycle { right: 106px; bottom: 152px; width: 52px; height: 52px; border-color: var(--amber); color: var(--amber); }
 .n64-btn--watch { right: 22px; top: 130px; width: 46px; height: 46px; font-size: 17px; color: var(--teal); }
-.n64-ui--touch .n64-btn { display: none !important; }
+.n64-ui--touch .n64-btn--watch,
+.n64-ui--touch .n64-btn--interact { display: none !important; }
 .n64-ui--touch .n64-item-label { right: auto; left: 28px; bottom: 18px; }
 
 .n64-item-label {

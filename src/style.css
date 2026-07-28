@@ -67,7 +67,14 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 
 /* ===== HUD ===== */
-.hud { position: absolute; inset: 0; pointer-events: none; z-index: 30; padding: 26px; font-size: 13px; letter-spacing: .06em; }
+/* Dark drop-shadow (inherited by all HUD text) keeps SECTOR/INTEL/stat readouts
+   legible against whatever's rendered behind them in the 3D scene — without it,
+   bright or teal-toned scenery (e.g. the atrium's ceiling lamp, in view from the
+   very first spawn) can wash the text out to near-illegibility. */
+.hud {
+  position: absolute; inset: 0; pointer-events: none; z-index: 30; padding: 26px; font-size: 13px; letter-spacing: .06em;
+  text-shadow: 0 1px 2px #000, 0 -1px 2px #000, 1px 0 2px #000, -1px 0 2px #000, 0 0 6px rgba(0,0,0,.8);
+}
 
 .crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 26px; height: 26px; }
 .crosshair i { position: absolute; background: var(--teal); box-shadow: 0 0 4px var(--teal); }
@@ -79,7 +86,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 .hud__sector { position: absolute; top: 26px; left: 26px; }
 .hud__sector .label { color: var(--muted); font-size: 11px; }
-.hud__sector .value { font-family: var(--display); font-weight: 600; font-size: 30px; color: var(--light); line-height: 1; letter-spacing: .04em; text-shadow: 0 0 10px rgba(47,212,198,.35); }
+.hud__sector .value { font-family: var(--display); font-weight: 600; font-size: 30px; color: var(--light); line-height: 1; letter-spacing: .04em; text-shadow: 0 1px 2px #000, 0 -1px 2px #000, 1px 0 2px #000, -1px 0 2px #000, 0 0 10px rgba(47,212,198,.35); }
 .hud__sector .coords { color: var(--teal); font-size: 11px; margin-top: 3px; }
 
 .hud__intel { position: absolute; top: 26px; right: 26px; text-align: right; }

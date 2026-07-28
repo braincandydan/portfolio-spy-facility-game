@@ -84,12 +84,18 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .crosshair i.b { left: 50%; bottom: 0; height: 9px; width: 2px; transform: translateX(-50%); }
 .crosshair i.dot { top: 50%; left: 50%; width: 2px; height: 2px; background: var(--amber); transform: translate(-50%, -50%); box-shadow: none; }
 
-.hud__sector { position: absolute; top: 26px; left: 26px; }
+/* Corner HUD readouts get their own translucent backing panel (not just a text-shadow):
+   at some camera angles/aspect ratios a bright 3D prop near spawn (e.g. the atrium's
+   glowing hologram column) sits directly behind these readouts and is large/solid enough
+   that the shadow alone doesn't keep the text legible — a solid backdrop fixes that
+   regardless of what's rendered behind it. Plain background (no padding) so it hugs the
+   existing text box exactly and doesn't shift any of the tuned mobile layout offsets. */
+.hud__sector { position: absolute; top: 26px; left: 26px; background: rgba(6,7,9,.55); }
 .hud__sector .label { color: var(--muted); font-size: 11px; }
 .hud__sector .value { font-family: var(--display); font-weight: 600; font-size: 30px; color: var(--light); line-height: 1; letter-spacing: .04em; text-shadow: 0 1px 2px #000, 0 -1px 2px #000, 1px 0 2px #000, -1px 0 2px #000, 0 0 10px rgba(47,212,198,.35); }
 .hud__sector .coords { color: var(--teal); font-size: 11px; margin-top: 3px; }
 
-.hud__intel { position: absolute; top: 26px; right: 26px; text-align: right; }
+.hud__intel { position: absolute; top: 26px; right: 26px; text-align: right; background: rgba(6,7,9,.55); }
 .hud__intel .label { color: var(--muted); font-size: 11px; }
 .hud__intel .value { font-family: var(--display); font-weight: 700; font-size: 26px; color: var(--amber); line-height: 1; }
 .hud__intel .value .total { color: var(--muted); font-size: 16px; }
@@ -98,7 +104,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .hud__intel--tap:active { border-color: var(--amber); background: rgba(10,11,13,.45); }
 
 /* Stats live under the sector readout (top-left) so the bottom stays clear for controls. */
-.hud__stats { position: absolute; top: 108px; left: 26px; display: flex; flex-direction: column; gap: 7px; width: 170px; }
+.hud__stats { position: absolute; top: 108px; left: 26px; display: flex; flex-direction: column; gap: 7px; width: 170px; background: rgba(6,7,9,.55); }
 .hud__stat .row { display: flex; justify-content: space-between; color: var(--muted2); font-size: 10px; }
 .hud__stat .bar { height: 6px; background: #1c1f25; border: 1px solid #33373f; margin-top: 2px; }
 .hud__stat .fill { height: 100%; }

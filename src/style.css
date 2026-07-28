@@ -426,6 +426,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .dialogue__line { font-size: 13px; }
   .watch__bezel { padding: 10px; }
   .watch__tabs { width: 110px; }
+  /* Narrower sidebar at this width can't fit "DOSSIER" at the desktop
+     padding/tracking, so it wraps onto a second line and throws off the
+     row heights vs. the other (shorter) tab labels. Tighten up so every
+     tab stays on one line. */
+  .watch__tab { padding: 9px 10px; font-size: 11px; letter-spacing: .08em; white-space: nowrap; }
   .panel-overlay { padding: 16px; align-items: flex-end; }
 }
 

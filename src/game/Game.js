@@ -98,6 +98,7 @@ export class Game {
       activeItem: null,
       lockMsg: null,
       dialogue: null, // { speaker, lines, idx }
+      arcadePlaying: false, // full-screen arcade mini-game in progress
       caffeine: 100,
       guide: null, // { name, plain, arrow, dist } → next unvisited objective
       err: null,
@@ -493,6 +494,7 @@ export class Game {
     }
     if (e.code === 'Escape') {
       if (e.repeat) return;
+      if (this.state.arcadePlaying) { this.exitArcade(); return; }
       if (this.state.dialogue) { this.setState({ dialogue: null }); return; }
       if (this.state.panel) this.closePanel();
       else if (this.state.showWatch) this.toggleWatch();
@@ -584,6 +586,18 @@ export class Game {
   // Lets the arcade mini-game reuse the same GLB already loaded for the
   // hangar saucer instead of fetching/parsing it a second time.
   getSpaceshipModel = () => (this._assets?.has('spaceship') ? this._assets.get('spaceship').clone() : null);
+
+  // The cabinet's PLAY button — leaves the boxed sector-access panel and
+  // hands the whole screen to the mini-game, like a real arcade cabinet would.
+  playArcade = () => {
+    this.audio.blip(680);
+    this.setState({ panel: null, arcadePlaying: true });
+  };
+
+  exitArcade = () => {
+    this.audio.blip(460);
+    this.setState({ arcadePlaying: false, active: true });
+  };
 
   openPanel = (id) => {
     this.audio.blip(680);

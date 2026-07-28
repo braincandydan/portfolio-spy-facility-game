@@ -403,3 +403,24 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .watch__tabs { width: 110px; }
   .panel-overlay { padding: 16px; align-items: flex-end; }
 }
+
+/* Respect OS-level reduced-motion: the CRT overlay flicker/sweep and the
+   various pulsing prompts/buttons never stop otherwise, which is an
+   unnecessary discomfort/vestibular trigger for sensitive players. */
+@media (prefers-reduced-motion: reduce) {
+  .crt-scanlines,
+  .crt-sweep,
+  .hud__stat .fill.pulse,
+  .hud__prompt .box,
+  .boot__title .ch-cursor,
+  .boot__cta,
+  .boot__cta--loading,
+  .pause__cta,
+  .dialogue__hint,
+  .n64-btn--interact,
+  .n64-lock-banner {
+    animation: none !important;
+  }
+  .crt-scanlines { opacity: .32; }
+  .crt-sweep { opacity: 0; }
+}

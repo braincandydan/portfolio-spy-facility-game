@@ -25,9 +25,12 @@ export function mountUI(root, game) {
   viewport.addEventListener('click', game.canvasClick);
   root.appendChild(viewport);
 
-  root.appendChild(el('div', 'crt-scanlines'));
-  root.appendChild(el('div', 'crt-vignette'));
-  root.appendChild(el('div', 'crt-sweep'));
+  const crtScanlines = el('div', 'crt-scanlines');
+  const crtVignette = el('div', 'crt-vignette');
+  const crtSweep = el('div', 'crt-sweep');
+  root.appendChild(crtScanlines);
+  root.appendChild(crtVignette);
+  root.appendChild(crtSweep);
 
   const hud = buildHud(game);
   root.appendChild(hud.node);
@@ -54,6 +57,10 @@ export function mountUI(root, game) {
 
   game.subscribe((state) => {
     const visited = game.objectivesVisited, total = game.objectivesTotal;
+    const crtOff = !state.crtOn;
+    crtScanlines.classList.toggle('hidden', crtOff);
+    crtVignette.classList.toggle('hidden', crtOff);
+    crtSweep.classList.toggle('hidden', crtOff);
     hud.update(state, visited, total);
     toast.classList.toggle('hidden', visited !== total);
     boot.update(state);
@@ -398,6 +405,10 @@ function renderWatchTab(game, state, visited, total) {
         <span class="k">AUDIO</span>
         <button class="watch__toggle" data-toggle-sound>${state.soundOn ? '◉ ON' : '○ OFF'}</button>
       </div>
+      <div class="watch__sys-row">
+        <span class="k">CRT FILTER</span>
+        <button class="watch__toggle" data-toggle-crt>${state.crtOn ? '◉ ON' : '○ OFF'}</button>
+      </div>
       <div class="watch__sens">
         <div class="watch__sens-row"><span>LOOK SENSITIVITY</span><span class="v">${state.sens.toFixed(1)}</span></div>
         <div class="watch__sens-controls">
@@ -420,6 +431,7 @@ function wireWarpButtons(content, game) {
 
 function wireWatchSysControls(content, game) {
   content.querySelector('[data-toggle-sound]')?.addEventListener('click', game.toggleSound);
+  content.querySelector('[data-toggle-crt]')?.addEventListener('click', game.toggleCrt);
   content.querySelector('[data-sens-up]')?.addEventListener('click', game.sensUp);
   content.querySelector('[data-sens-down]')?.addEventListener('click', game.sensDown);
   content.querySelector('[data-reset-pos]')?.addEventListener('click', game.resetPosition);

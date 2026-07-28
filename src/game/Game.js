@@ -63,6 +63,7 @@ export class Game {
       prompt: null,
       objectives: { projects: false, skills: false, about: false, contact: false, resume: false },
       soundOn: true,
+      crtOn: true,
       sens: sensitivity,
       hasGun: false,
       inventory: [],
@@ -795,6 +796,11 @@ export class Game {
   toggleSound = () => {
     this.setState((s) => ({ soundOn: !s.soundOn }));
     this.audio.setSoundOn(this.state.soundOn);
+    this.audio.blip(600);
+  };
+
+  toggleCrt = () => {
+    this.setState((s) => ({ crtOn: !s.crtOn }));
     this.audio.blip(600);
   };
 

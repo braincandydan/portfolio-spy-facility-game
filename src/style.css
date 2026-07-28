@@ -395,8 +395,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .hud__sector .value { font-size: 20px; }
   .hud__intel { top: 14px; right: 14px; }
   .hud__intel .value { font-size: 20px; }
-  .hud__stats { top: 92px; left: 14px; width: 128px; gap: 5px; }
-  .hud__guide { top: 60px; font-size: 10px; padding: 4px 10px; }
+  .hud__stats { top: 122px; left: 14px; width: 128px; gap: 5px; }
+  /* Below the sector/intel row (not centered over it) — at phone widths the
+     guide's nowrap text is wide enough to collide with the INTEL readout
+     when both sit on the same 26px top line. */
+  .hud__guide { top: 76px; font-size: 10px; padding: 4px 10px; }
   .hud__prompt { top: 48%; }
   .hud__prompt .box { font-size: 13px; padding: 12px 16px; }
   .hud__ticker { left: 0; right: 0; bottom: 0; border-bottom: none; }

@@ -39,6 +39,28 @@ const COFFEE_SPOTS = [
 ];
 const GUIDE_ARROWS = ['↑', '↖', '←', '↙', '↓', '↘', '→', '↗'];
 
+// Player-tuned prefs (audio/CRT/sensitivity) persist across reloads instead of
+// silently reverting to defaults every time the page is refreshed or revisited.
+const SETTINGS_KEY = 'facility-settings-v1';
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveSettings(patch) {
+  try {
+    const current = loadSettings();
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...current, ...patch }));
+  } catch {
+    // Storage unavailable (private browsing, quota, etc.) — fail silently.
+  }
+}
+
 /**
  * Owns the Three.js scene, GoldenEye-style single-stick controls, doors,
  * gadgets, and interactive-portfolio state. UI is a pure function of `state`.
@@ -47,8 +69,14 @@ export class Game {
   constructor(mountEl, { pixelation = 0.45, sensitivity = 2.2, enableSound = true } = {}) {
     this.mountEl = mountEl;
     this.pixelation = pixelation;
-    this.enableSound = enableSound;
-    this.audio = new AudioEngine({ enabled: enableSound });
+
+    const saved = loadSettings();
+    const soundOn = typeof saved.soundOn === 'boolean' ? saved.soundOn : enableSound;
+    const crtOn = typeof saved.crtOn === 'boolean' ? saved.crtOn : true;
+    const sens = typeof saved.sens === 'number' ? saved.sens : sensitivity;
+
+    this.enableSound = soundOn;
+    this.audio = new AudioEngine({ enabled: soundOn });
 
     this.state = {
       ready: false, // assets/scene finished loading — start() can enter gameplay
@@ -62,9 +90,9 @@ export class Game {
       coords: '00.0 · 00.0',
       prompt: null,
       objectives: { projects: false, skills: false, about: false, contact: false, resume: false },
-      soundOn: true,
-      crtOn: true,
-      sens: sensitivity,
+      soundOn,
+      crtOn,
+      sens,
       hasGun: false,
       inventory: [],
       activeItem: null,
@@ -803,21 +831,25 @@ export class Game {
   toggleSound = () => {
     this.setState((s) => ({ soundOn: !s.soundOn }));
     this.audio.setSoundOn(this.state.soundOn);
+    saveSettings({ soundOn: this.state.soundOn });
     this.audio.blip(600);
   };
 
   toggleCrt = () => {
     this.setState((s) => ({ crtOn: !s.crtOn }));
+    saveSettings({ crtOn: this.state.crtOn });
     this.audio.blip(600);
   };
 
   sensUp = () => {
     this.setState((s) => ({ sens: Math.min(6, +(s.sens + 0.4).toFixed(1)) }));
+    saveSettings({ sens: this.state.sens });
     this.audio.blip(700);
   };
 
   sensDown = () => {
     this.setState((s) => ({ sens: Math.max(0.6, +(s.sens - 0.4).toFixed(1)) }));
+    saveSettings({ sens: this.state.sens });
     this.audio.blip(500);
   };
 

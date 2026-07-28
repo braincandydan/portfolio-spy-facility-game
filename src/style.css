@@ -303,6 +303,14 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .arcade-card__copy .name { color: var(--light); font-family: var(--display); font-size: 20px; }
 .arcade-card__copy .meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
 
+.arcade-flight { position: relative; border: 1px solid var(--amber); background: #03040a; }
+.arcade-flight__canvas { width: 100%; aspect-ratio: 16 / 9; }
+.arcade-flight__canvas canvas { display: block; width: 100% !important; height: 100% !important; }
+.arcade-flight__hint {
+  position: absolute; left: 10px; bottom: 8px; pointer-events: none;
+  color: var(--teal); font-size: 10px; letter-spacing: .1em; text-shadow: 0 0 6px rgba(0,0,0,.8);
+}
+
 /* ===== GoldenEye / N64 stick controls (all devices) ===== */
 .n64-ui { position: absolute; inset: 0; z-index: 31; pointer-events: none; }
 

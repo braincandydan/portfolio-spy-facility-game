@@ -213,30 +213,72 @@ function buildStarfield(THREE) {
   return new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.8, fog: false }));
 }
 
+// Rough, simplified silhouettes of real continents (normalized 0..1 coords,
+// y down). Not surveyed coastlines — just enough shape to read as "Africa,"
+// "South America," etc. at a glance while flying past, rather than random
+// blobs. Scattered/rotated across the tile below, which then repeats — a
+// single non-tiled accurate world map would need a texture tens of
+// thousands of pixels wide to hold this much local detail at this radius,
+// so this stays a repeating "real-looking" pattern rather than one true map.
+const CONTINENT_SHAPES = [
+  // Africa
+  [[0.55, 0.00], [0.62, 0.05], [0.78, 0.18], [0.95, 0.28], [0.85, 0.35], [0.78, 0.50],
+   [0.70, 0.62], [0.66, 0.78], [0.55, 0.95], [0.45, 0.85], [0.38, 0.70], [0.30, 0.60],
+   [0.15, 0.45], [0.05, 0.35], [0.10, 0.20], [0.25, 0.08], [0.40, 0.02]],
+  // South America
+  [[0.35, 0.00], [0.55, 0.05], [0.70, 0.15], [0.80, 0.22], [0.72, 0.35], [0.65, 0.50],
+   [0.60, 0.65], [0.50, 0.80], [0.42, 0.92], [0.38, 1.00], [0.30, 0.90], [0.20, 0.75],
+   [0.15, 0.55], [0.10, 0.35], [0.18, 0.20], [0.28, 0.08]],
+  // Australia — the Gulf of Carpentaria notch + Cape York spike is the giveaway
+  [[0.30, 0.05], [0.45, 0.00], [0.55, 0.12], [0.65, 0.02], [0.72, 0.20], [0.90, 0.35],
+   [0.88, 0.55], [0.80, 0.75], [0.65, 0.90], [0.45, 0.92], [0.25, 0.85], [0.10, 0.65],
+   [0.05, 0.40], [0.15, 0.15]],
+  // India — wavy coasts tapering to a point, not a plain triangle
+  [[0.10, 0.00], [0.90, 0.00], [0.80, 0.20], [0.85, 0.40], [0.65, 0.55], [0.60, 0.75],
+   [0.50, 0.98], [0.42, 0.75], [0.35, 0.55], [0.15, 0.40], [0.20, 0.20]],
+  // Italy — the boot
+  [[0.35, 0.00], [0.55, 0.05], [0.60, 0.25], [0.50, 0.40], [0.55, 0.55], [0.70, 0.60],
+   [0.75, 0.75], [0.60, 0.85], [0.55, 0.95], [0.45, 0.85], [0.40, 0.65], [0.35, 0.45], [0.30, 0.25]],
+];
+
+function drawSilhouette(ctx, shape, cx, cy, scale, rot) {
+  const cos = Math.cos(rot), sin = Math.sin(rot);
+  ctx.beginPath();
+  shape.forEach(([nx, ny], i) => {
+    const x0 = (nx - 0.5) * scale, y0 = (ny - 0.5) * scale;
+    const x = cx + x0 * cos - y0 * sin;
+    const y = cy + x0 * sin + y0 * cos;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fill();
+}
+
 function buildGroundTexture(THREE) {
+  // Higher-res than the rest of the game's deliberately blocky NearestFilter
+  // look — at flight altitude the camera sits close enough to the ground that
+  // a coarse/nearest-filtered texture just reads as blocky steps, erasing the
+  // silhouettes entirely. Smooth filtering + more source detail is what
+  // actually lets the continent shapes read as shapes while flying past.
   const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
+  canvas.width = 768;
+  canvas.height = 768;
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#123a5e';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#2f7a4f';
-  for (let i = 0; i < 22; i++) {
+  for (let i = 0; i < 12; i++) {
+    const shape = CONTINENT_SHAPES[Math.floor(Math.random() * CONTINENT_SHAPES.length)];
+    const scale = (45 + Math.random() * 55) * 3;
     const cx = Math.random() * canvas.width;
     const cy = Math.random() * canvas.height;
-    const r = 14 + Math.random() * 30;
-    ctx.beginPath();
-    for (let a = 0; a <= Math.PI * 2 + 0.01; a += 0.35) {
-      const rr = r * (0.7 + Math.random() * 0.6);
-      const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr * 0.6;
-      a === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.fill();
+    const rot = Math.random() * Math.PI * 2;
+    drawSilhouette(ctx, shape, cx, cy, scale, rot);
   }
   const tex = new THREE.CanvasTexture(canvas);
-  tex.magFilter = THREE.NearestFilter; // low-fi to match the rest of the game
-  tex.minFilter = THREE.NearestFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.anisotropy = 8; // ground is viewed at a shallow, near-horizontal angle
   // Tile densely — up close (low altitude, huge sphere) a single wrap of this
   // texture would span the entire visible world and look like one blurry blob.
   tex.wrapS = THREE.RepeatWrapping;

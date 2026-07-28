@@ -468,6 +468,7 @@ export class Game {
       return;
     }
     if (e.code === 'KeyE') {
+      if (e.repeat) return;
       if (this.state.dialogue || (this.state.active && this.state.prompt)) {
         this.interact();
         return;

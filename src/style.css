@@ -25,6 +25,15 @@ a { color: var(--teal); text-decoration: none; }
 a:hover { color: var(--amber); }
 button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
 
+/* Visible keyboard-focus ring for buttons/links (wristwatch tabs, panel close, etc).
+   Only shows for keyboard/programmatic focus, not mouse/touch clicks. */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 @keyframes flick { 0%, 97%, 100% { opacity: .32; } 98% { opacity: .18; } 99% { opacity: .4; } }
 @keyframes tick { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }

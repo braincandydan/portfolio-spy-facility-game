@@ -294,22 +294,33 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .resume-info .name { color: var(--light); font-family: var(--display); font-size: 20px; }
 .resume-info .meta { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
 
-.arcade-card { border: 1px solid var(--line); background: var(--panel-bg); padding: 22px; display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
-.arcade-card__screen {
-  width: 140px; height: 110px; display: flex; align-items: center; justify-content: center;
+/* Cabinet splash — shown inside the normal sector-access panel; PLAY hands
+   off to the full-screen .arcade-overlay below. */
+.arcade-splash {
+  border: 1px solid var(--line); background: var(--panel-bg); padding: 26px;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.arcade-splash__screen {
+  width: 160px; height: 110px; display: flex; align-items: center; justify-content: center;
   background: repeating-linear-gradient(0deg, #06090c, #06090c 3px, #0d1218 3px, #0d1218 6px);
   border: 1px solid var(--amber); color: var(--teal); letter-spacing: .14em; font-size: 12px;
 }
-.arcade-card__copy .name { color: var(--light); font-family: var(--display); font-size: 20px; }
-.arcade-card__copy .meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
-
-.arcade-flight { position: relative; border: 1px solid var(--amber); background: #03040a; }
-.arcade-flight__canvas { width: 100%; aspect-ratio: 16 / 9; }
-.arcade-flight__canvas canvas { display: block; width: 100% !important; height: 100% !important; }
-.arcade-flight__hint {
-  position: absolute; left: 10px; bottom: 8px; pointer-events: none;
-  color: var(--teal); font-size: 10px; letter-spacing: .1em; text-shadow: 0 0 6px rgba(0,0,0,.8);
+.arcade-play-btn {
+  border: 1px solid var(--teal); background: rgba(10,11,13,.6); color: var(--light);
+  padding: 12px 30px; font-size: 14px; letter-spacing: .12em; cursor: pointer; animation: pulse 1.8s infinite;
 }
+.arcade-play-btn:hover { background: rgba(47,212,198,.16); border-color: var(--amber); }
+
+/* Full-screen mini-game stage, handed the whole viewport like a real cabinet. */
+.arcade-overlay { position: absolute; inset: 0; z-index: 66; background: #03040a; }
+.arcade-overlay__stage { position: absolute; inset: 0; }
+.arcade-overlay__stage canvas { display: block; width: 100% !important; height: 100% !important; }
+.arcade-overlay__exit {
+  position: absolute; top: 20px; right: 20px; pointer-events: auto;
+  border: 1px solid var(--amber); background: rgba(10,11,13,.7); color: var(--amber);
+  padding: 8px 16px; font-size: 12px; letter-spacing: .1em; cursor: pointer;
+}
+.arcade-overlay__exit:hover { background: rgba(255,176,0,.12); }
 
 /* ===== GoldenEye / N64 stick controls (all devices) ===== */
 .n64-ui { position: absolute; inset: 0; z-index: 31; pointer-events: none; }

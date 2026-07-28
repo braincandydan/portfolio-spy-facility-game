@@ -56,6 +56,9 @@ export function mountUI(root, game) {
   const dialogue = buildDialogue(game);
   root.appendChild(dialogue.node);
 
+  const arcadeOverlay = buildArcadeOverlay(game);
+  root.appendChild(arcadeOverlay.node);
+
   game.subscribe((state) => {
     const visited = game.objectivesVisited, total = game.objectivesTotal;
     const crtOff = !state.crtOn;
@@ -69,6 +72,7 @@ export function mountUI(root, game) {
     watch.update(state, visited, total);
     panel.update(state);
     dialogue.update(state);
+    arcadeOverlay.update(state);
   });
 
   return { mount: () => game.init() };
@@ -458,23 +462,19 @@ function buildPanel(game) {
     if (e.target === node) game.closePanel();
   });
   panel.addEventListener('click', (e) => e.stopPropagation());
+  // Delegated so it survives body.innerHTML rebuilds — the arcade splash
+  // button isn't always in the DOM, only while that panel is showing.
+  body.addEventListener('click', (e) => {
+    if (e.target.closest('[data-arcade-play]')) game.playArcade();
+  });
 
-  // The arcade mini-game owns a live WebGL context + render loop, so the
-  // body can only be rebuilt when the panel actually changes — not on every
-  // unrelated state tick — or its canvas would get torn down mid-frame.
   let currentPanelId = null;
-  let arcadeInstance = null;
-  const teardownArcade = () => { arcadeInstance?.dispose(); arcadeInstance = null; };
 
   return {
     node,
     update(state) {
       node.classList.toggle('hidden', !state.panel);
-      if (!state.panel) {
-        if (currentPanelId) teardownArcade();
-        currentPanelId = null;
-        return;
-      }
+      if (!state.panel) { currentPanelId = null; return; }
       const titles = {
         ...ZONE_NAMES,
         briefing: 'BRIEFING REEL',
@@ -482,15 +482,38 @@ function buildPanel(game) {
       };
       header.querySelector('[data-panel-title]').textContent = titles[state.panel] || state.panel;
       if (state.panel === currentPanelId) return;
-      if (currentPanelId === 'arcade') teardownArcade();
       currentPanelId = state.panel;
       body.innerHTML = renderPanelBody(state.panel);
-      if (state.panel === 'arcade' && game.THREE) {
-        arcadeInstance = mountArcadeFlight(
-          body.querySelector('[data-arcade-mount]'),
-          game.THREE,
-          game.getSpaceshipModel,
-        );
+    },
+  };
+}
+
+// Full-screen mini-game stage — hands over the whole viewport like a real
+// cabinet would, instead of running inside the small boxed sector-access
+// panel. Mounted/disposed only while actually playing, since it owns a live
+// WebGL context + render loop.
+function buildArcadeOverlay(game) {
+  const node = el('div', 'arcade-overlay hidden');
+  const stage = el('div', 'arcade-overlay__stage');
+  const exitBtn = el('button', 'arcade-overlay__exit', `✕ ${isTouchDevice() ? 'EXIT' : '[ESC] EXIT'}`);
+  exitBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    game.exitArcade();
+  });
+  node.appendChild(stage);
+  node.appendChild(exitBtn);
+
+  let instance = null;
+  return {
+    node,
+    update(state) {
+      const show = !!state.arcadePlaying;
+      node.classList.toggle('hidden', !show);
+      if (show && !instance && game.THREE) {
+        instance = mountArcadeFlight(stage, game.THREE, game.getSpaceshipModel);
+      } else if (!show && instance) {
+        instance.dispose();
+        instance = null;
       }
     },
   };
@@ -581,9 +604,9 @@ function renderPanelBody(panelId) {
     return `
       <div class="panel__heading">REC ROOM — ORBITAL FLYER</div>
       <div class="panel__sub">The recovered saucer, in a holding pattern. ${touch ? 'Drag' : 'Drag or arrows/WASD'} to steer — no crashing, no score, just fly.</div>
-      <div class="arcade-flight">
-        <div class="arcade-flight__canvas" data-arcade-mount></div>
-        <div class="arcade-flight__hint">${touch ? 'DRAG TO STEER' : 'DRAG OR ARROWS/WASD TO STEER'}</div>
+      <div class="arcade-splash">
+        <div class="arcade-splash__screen">◈ ATTRACT MODE</div>
+        <button type="button" class="arcade-play-btn" data-arcade-play>▶ PLAY</button>
       </div>
     `;
   }

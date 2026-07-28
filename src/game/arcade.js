@@ -9,12 +9,29 @@
 
 // The radius is chosen so the horizon (sqrt(2 * R * cameraHeight)) sits well
 // past FOG_FAR — the curve mathematically exists, but fog hides the ground
-// entirely before it would ever become visible, so it never reads as "a ball."
+// entirely before it would ever become visible, so it never reads as "a ball,"
+// at any altitude in ALT_MIN..ALT_MAX below.
 const EARTH_RADIUS = 600;
-const ORBIT_ALTITUDE = 2; // fly low and close to the "ground"
-const ORBIT_RADIUS = EARTH_RADIUS + ORBIT_ALTITUDE;
-const SHIP_SPEED = 6; // world units/sec along the surface
-const TURN_RATE = 1.6; // rad/sec at full steering deflection
+const ALT_MIN = 1.2; // clearance close enough to the ground to feel fast/low
+const ALT_MAX = 30; // still nowhere near far enough to reveal curvature
+const START_ALTITUDE = 2;
+const SHIP_SPEED = 8; // world units/sec along the surface
+
+// Momentum-based steering: input accelerates a velocity that has to build up
+// and bleeds off with drag, instead of snapping straight to an angle — reads
+// as an aircraft banking/diving into a turn rather than an instant swivel.
+const TURN_MAX = 1.6; // rad/sec ceiling
+const TURN_ACCEL = 4.2; // rad/sec^2
+const TURN_DAMPING = 3.2; // 1/sec decay toward 0 with no input
+const CLIMB_MAX = 7; // units/sec ceiling
+const CLIMB_ACCEL = 11; // units/sec^2
+const CLIMB_DAMPING = 3.2;
+
+// Purely cosmetic — banks/pitches the rendered ship without touching the
+// actual flight-path math, so it can't introduce any drift/instability.
+const VISUAL_BANK = 0.6; // rad, at full turn rate
+const VISUAL_PITCH = 0.4; // rad, at full climb rate
+
 const DRAG_RANGE = 60; // px of drag for full steering deflection
 const CAM_BACK = 4.5; // chase-cam distance behind the ship, along -forward
 const CAM_UP = 0.8; // chase-cam height above the ship, along local up — low and close
@@ -74,12 +91,16 @@ export function mountArcadeFlight(container, THREE, getShipModel) {
   pmrem.dispose();
 
   // Flight state: a point on the orbit sphere plus an orthonormal
-  // (right / up / forward) frame tangent to it. Steering nudges `forward`
-  // and `up` within that tangent plane; each frame we re-pin the altitude
-  // and re-orthonormalize so the ship always sits flush with the surface.
-  // The sphere is only a math device (see file header) — nothing about it
-  // is meant to be visually recognizable as a globe.
-  const pos = new THREE.Vector3(0, 0, ORBIT_RADIUS);
+  // (right / up / forward) frame tangent to it. Yaw steering turns `forward`
+  // within that tangent plane; each frame we re-pin the current altitude and
+  // re-orthonormalize so the ship always sits flush with the surface at
+  // whatever height it's currently climbed/dived to. The sphere is only a
+  // math device (see file header) — nothing about it is meant to be
+  // visually recognizable as a globe.
+  let altitude = START_ALTITUDE;
+  let turnVel = 0; // rad/sec, current yaw rate (momentum)
+  let climbVel = 0; // units/sec, current vertical rate (momentum)
+  const pos = new THREE.Vector3(0, 0, EARTH_RADIUS + altitude);
   const up = pos.clone().normalize();
   const forward = new THREE.Vector3(1, 0, 0)
     .sub(up.clone().multiplyScalar(up.dot(new THREE.Vector3(1, 0, 0))))
@@ -126,6 +147,12 @@ export function mountArcadeFlight(container, THREE, getShipModel) {
 
   const clock = new THREE.Clock();
   const turnQuat = new THREE.Quaternion();
+  const baseMatrix = new THREE.Matrix4();
+  const baseQuat = new THREE.Quaternion();
+  const bankQuat = new THREE.Quaternion();
+  const pitchQuat = new THREE.Quaternion();
+  const LOCAL_X = new THREE.Vector3(1, 0, 0);
+  const LOCAL_Z = new THREE.Vector3(0, 0, 1);
   const camLookTarget = new THREE.Vector3();
 
   function frame() {
@@ -138,28 +165,37 @@ export function mountArcadeFlight(container, THREE, getShipModel) {
     const sx = dragging ? steerX : kx;
     const sy = dragging ? steerY : ky;
 
+    // Momentum: steering input accelerates a turn/climb rate that has to
+    // build up, and bleeds off with drag once released — banks into turns
+    // and eases out of climbs/dives instead of snapping to an angle.
+    if (sx) turnVel = Math.max(-TURN_MAX, Math.min(TURN_MAX, turnVel - sx * TURN_ACCEL * dt));
+    else turnVel *= Math.max(0, 1 - TURN_DAMPING * dt);
+    if (sy) climbVel = Math.max(-CLIMB_MAX, Math.min(CLIMB_MAX, climbVel - sy * CLIMB_ACCEL * dt));
+    else climbVel *= Math.max(0, 1 - CLIMB_DAMPING * dt);
+
     right.crossVectors(forward, up).normalize();
-    if (sx) {
-      turnQuat.setFromAxisAngle(up, -sx * TURN_RATE * dt);
+    if (turnVel) {
+      turnQuat.setFromAxisAngle(up, turnVel * dt);
       forward.applyQuaternion(turnQuat);
-    }
-    if (sy) {
-      turnQuat.setFromAxisAngle(right, -sy * TURN_RATE * dt);
-      forward.applyQuaternion(turnQuat);
-      up.applyQuaternion(turnQuat);
     }
 
-    // Advance along the surface, then re-pin altitude + re-square the frame.
+    altitude = Math.max(ALT_MIN, Math.min(ALT_MAX, altitude + climbVel * dt));
+
+    // Advance along the surface at the current altitude, then re-square the frame.
     pos.addScaledVector(forward, SHIP_SPEED * dt);
-    pos.setLength(ORBIT_RADIUS);
+    pos.setLength(EARTH_RADIUS + altitude);
     up.copy(pos).normalize();
     forward.sub(up.clone().multiplyScalar(forward.dot(up))).normalize();
     right.crossVectors(forward, up).normalize();
 
     ship.position.copy(pos);
-    ship.quaternion.setFromRotationMatrix(
-      new THREE.Matrix4().makeBasis(right, up, forward.clone().negate()),
-    );
+    baseMatrix.makeBasis(right, up, forward.clone().negate());
+    baseQuat.setFromRotationMatrix(baseMatrix);
+    // Cosmetic only — banks/pitches the rendered model, doesn't touch forward/up
+    // above, so it can never introduce drift into the actual flight path.
+    bankQuat.setFromAxisAngle(LOCAL_Z, (turnVel / TURN_MAX) * VISUAL_BANK);
+    pitchQuat.setFromAxisAngle(LOCAL_X, (climbVel / CLIMB_MAX) * VISUAL_PITCH);
+    ship.quaternion.copy(baseQuat).multiply(pitchQuat).multiply(bankQuat);
 
     // Low chase-cam, looking ahead and slightly down at the terrain — a
     // normal flight-cam, not one that tries to frame a "planet."

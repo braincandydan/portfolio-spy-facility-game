@@ -457,8 +457,14 @@ export class Game {
   // ---- keyboard (Esc / Tab / E shortcuts only — movement is stick) ----
   _onKeyDown(e) {
     if (!this.state.booted) return;
-    if (e.code === 'Tab') { e.preventDefault(); this.toggleWatch(); return; }
+    if (e.code === 'Tab') {
+      e.preventDefault();
+      if (e.repeat) return;
+      this.toggleWatch();
+      return;
+    }
     if (e.code === 'Escape') {
+      if (e.repeat) return;
       if (this.state.dialogue) { this.setState({ dialogue: null }); return; }
       if (this.state.panel) this.closePanel();
       else if (this.state.showWatch) this.toggleWatch();

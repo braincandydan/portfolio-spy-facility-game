@@ -12,6 +12,19 @@ export class AudioEngine {
     this.ctx = null;
     this.amp = null;
     this.music = null;
+
+    // Stop the moment the tab/app loses focus — a background tab silently
+    // playing music after the visitor has moved on is the one sound sin
+    // this site should never commit.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        this.music?.pause();
+        this.ctx?.suspend().catch(() => {});
+      } else if (this.soundOn) {
+        this.music?.play().catch(() => {});
+        this.ctx?.resume().catch(() => {});
+      }
+    });
   }
 
   init() {

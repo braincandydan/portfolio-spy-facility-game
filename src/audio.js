@@ -15,16 +15,24 @@ export class AudioEngine {
 
     // Stop the moment the tab/app loses focus — a background tab silently
     // playing music after the visitor has moved on is the one sound sin
-    // this site should never commit.
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        this.music?.pause();
-        this.ctx?.suspend().catch(() => {});
-      } else if (this.soundOn) {
-        this.music?.play().catch(() => {});
-        this.ctx?.resume().catch(() => {});
-      }
-    });
+    // this site should never commit. `visibilitychange` alone is unreliable
+    // on iOS Safari when switching apps (it can fire late or not at all), so
+    // `pagehide`/`blur` back it up — all cheap, idempotent no-ops if already
+    // paused/playing.
+    const pause = () => {
+      this.music?.pause();
+      this.ctx?.suspend().catch(() => {});
+    };
+    const resume = () => {
+      if (!this.soundOn) return;
+      this.music?.play().catch(() => {});
+      this.ctx?.resume().catch(() => {});
+    };
+    document.addEventListener('visibilitychange', () => (document.hidden ? pause() : resume()));
+    window.addEventListener('pagehide', pause);
+    window.addEventListener('pageshow', resume);
+    window.addEventListener('blur', pause);
+    window.addEventListener('focus', resume);
   }
 
   init() {

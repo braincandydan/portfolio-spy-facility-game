@@ -13,7 +13,7 @@
 export const ZONES = [
   { id: 'projects', name: 'CRAFT ANALYSIS', plain: 'MY PROJECTS', hud: 'HANGAR-1', target: [0, -28], color: '#ffb000', verb: 'ACCESS' },
   { id: 'skills', name: 'SIGINT ARCHIVE', plain: 'MY SKILLS', hud: 'SIGINT', target: [28, 0], color: '#2fd4c6', verb: 'ACCESS' },
-  { id: 'about', name: 'PERSONNEL DOSSIER', plain: 'ABOUT ME', hud: 'XENO-LAB', target: [4.5, 29], color: '#2fd4c6', verb: 'READ' },
+  { id: 'about', name: 'PERSONNEL DOSSIER', plain: 'ABOUT ME', hud: 'XENO-LAB', target: [4.5, 27.5], color: '#2fd4c6', verb: 'READ' },
   { id: 'contact', name: 'SUBJECT J-RÖD', plain: 'CONTACT ME', hud: 'XENO-LAB', target: [0, 28], color: '#2fd4c6', verb: 'TALK TO' },
   { id: 'resume', name: 'DATA CORE', plain: 'MY RESUME', hud: 'S4 CORE', target: [0, 3], color: '#2fd4c6', verb: 'ACCESS' },
 ];
@@ -116,11 +116,22 @@ const BLOCKED_CIRCLES = [
   { x: 0, z: 32, radius: 2.5 }, // XENO-LAB containment cylinder
 ];
 
+// Solid rectangular props, matching their real geometry (see buildDocsTable in
+// s4props.js — a 2.6×1.5 table). A circle here would either over-block the
+// room or under-block the corners, so use the same [minX,maxX,minZ,maxZ]
+// rect shape as door gates.
+const BLOCKED_RECTS = [
+  [3.2, 5.8, 28.75, 30.25], // Personnel dossier reading table (XENO-LAB)
+];
+
 function isInsideProp(x, z, radius) {
   for (const c of BLOCKED_CIRCLES) {
     const dx = x - c.x, dz = z - c.z;
     const r = c.radius + radius;
     if (dx * dx + dz * dz < r * r) return true;
+  }
+  for (const [a, b, c, d] of BLOCKED_RECTS) {
+    if (x + radius > a && x - radius < b && z + radius > c && z - radius < d) return true;
   }
   return false;
 }

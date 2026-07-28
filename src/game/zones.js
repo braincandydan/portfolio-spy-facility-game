@@ -108,6 +108,23 @@ export function isInsideGate(x, z, radius = 0.7) {
   return false;
 }
 
+// Solid props that sit inside an otherwise-walkable region. Without this the
+// player can walk straight through them — worst offender is the alien's glass
+// containment cell (XENO-LAB), which fully encloses the camera and leaves you
+// staring at a lit, textureless void with no way to tell what happened.
+const BLOCKED_CIRCLES = [
+  { x: 0, z: 32, radius: 2.5 }, // XENO-LAB containment cylinder
+];
+
+function isInsideProp(x, z, radius) {
+  for (const c of BLOCKED_CIRCLES) {
+    const dx = x - c.x, dz = z - c.z;
+    const r = c.radius + radius;
+    if (dx * dx + dz * dz < r * r) return true;
+  }
+  return false;
+}
+
 export function isWalkable(x, z, radius = 0.7) {
   let inRegion = false;
   for (const [a, b, c, d] of REGIONS) {
@@ -118,6 +135,7 @@ export function isWalkable(x, z, radius = 0.7) {
   }
   if (!inRegion) return false;
   if (isInsideGate(x, z, radius)) return false;
+  if (isInsideProp(x, z, radius)) return false;
   return true;
 }
 

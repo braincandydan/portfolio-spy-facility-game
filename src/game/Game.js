@@ -581,6 +581,10 @@ export class Game {
     this._mark(id);
   };
 
+  // Lets the arcade mini-game reuse the same GLB already loaded for the
+  // hangar saucer instead of fetching/parsing it a second time.
+  getSpaceshipModel = () => (this._assets?.has('spaceship') ? this._assets.get('spaceship').clone() : null);
+
   openPanel = (id) => {
     this.audio.blip(680);
     this._mark(id);

@@ -1,6 +1,7 @@
 import { ZONE_ORDER, ZONE_NAMES, ZONE_SUBS } from './game/zones.js';
 import { profile, comms, projects, skills } from './content.js';
 import { isTouchDevice } from './ui/touchControls.js';
+import { mountArcadeFlight } from './game/arcade.js';
 
 const CLEARANCE_LABELS = ['UNAUTHORIZED', 'RECRUIT', 'FIELD', 'OPERATIVE', 'SENIOR', '00 — AGENT'];
 
@@ -458,18 +459,39 @@ function buildPanel(game) {
   });
   panel.addEventListener('click', (e) => e.stopPropagation());
 
+  // The arcade mini-game owns a live WebGL context + render loop, so the
+  // body can only be rebuilt when the panel actually changes — not on every
+  // unrelated state tick — or its canvas would get torn down mid-frame.
+  let currentPanelId = null;
+  let arcadeInstance = null;
+  const teardownArcade = () => { arcadeInstance?.dispose(); arcadeInstance = null; };
+
   return {
     node,
     update(state) {
       node.classList.toggle('hidden', !state.panel);
-      if (!state.panel) return;
+      if (!state.panel) {
+        if (currentPanelId) teardownArcade();
+        currentPanelId = null;
+        return;
+      }
       const titles = {
         ...ZONE_NAMES,
         briefing: 'BRIEFING REEL',
         arcade: 'REC ROOM — ARCADE',
       };
       header.querySelector('[data-panel-title]').textContent = titles[state.panel] || state.panel;
+      if (state.panel === currentPanelId) return;
+      if (currentPanelId === 'arcade') teardownArcade();
+      currentPanelId = state.panel;
       body.innerHTML = renderPanelBody(state.panel);
+      if (state.panel === 'arcade' && game.THREE) {
+        arcadeInstance = mountArcadeFlight(
+          body.querySelector('[data-arcade-mount]'),
+          game.THREE,
+          game.getSpaceshipModel,
+        );
+      }
     },
   };
 }
@@ -555,15 +577,13 @@ function renderPanelBody(panelId) {
     `;
   }
   if (panelId === 'arcade') {
+    const touch = isTouchDevice();
     return `
-      <div class="panel__heading">REC ROOM — INSERT COIN</div>
-      <div class="panel__sub">Playable side missions live here. Drop mini-games into this wing later — the cabinet is ready.</div>
-      <div class="arcade-card">
-        <div class="arcade-card__screen">◈ ATTRACT MODE</div>
-        <div class="arcade-card__copy">
-          <div class="name">COMING ONLINE</div>
-          <div class="meta">Shooting range is live · PP7 on the bench · more cabinets TBD</div>
-        </div>
+      <div class="panel__heading">REC ROOM — ORBITAL FLYER</div>
+      <div class="panel__sub">The recovered saucer, in a holding pattern. ${touch ? 'Drag' : 'Drag or arrows/WASD'} to steer — no crashing, no score, just fly.</div>
+      <div class="arcade-flight">
+        <div class="arcade-flight__canvas" data-arcade-mount></div>
+        <div class="arcade-flight__hint">${touch ? 'DRAG TO STEER' : 'DRAG OR ARROWS/WASD TO STEER'}</div>
       </div>
     `;
   }

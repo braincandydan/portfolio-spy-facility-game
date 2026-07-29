@@ -1,7 +1,10 @@
 // REC ROOM cabinet mini-game: fly the recovered saucer in a low, fast pass
-// over a huge procedural world. No score, no crashing — just a chill toy.
+// over a huge procedural world, flying through ring gates to charge the
+// warp drive. At 6 rings, engage warp — the ship flips belly-forward,
+// blasts to speed, and the world swaps to an alien planet (and back again
+// the same way). No score beyond the warp meter, no crashing.
 //
-// The flight math still treats the world as a sphere you travel around (so
+// The flight math still treats each world as a sphere you travel around (so
 // steering behaves consistently forever), but the sphere is deliberately
 // enormous relative to how close/low the camera flies — combined with fog
 // hiding the horizon before curvature would read as "a ball" — so it feels
@@ -10,8 +13,8 @@
 // The radius is chosen so the horizon (sqrt(2 * R * cameraHeight)) sits well
 // past FOG_FAR — the curve mathematically exists, but fog hides the ground
 // entirely before it would ever become visible, so it never reads as "a ball,"
-// at any altitude in ALT_MIN..ALT_MAX below.
-const EARTH_RADIUS = 600;
+// at any altitude in ALT_MIN..ALT_MAX below. Shared by both worlds.
+const WORLD_RADIUS = 600;
 const ALT_MIN = 1.2; // clearance close enough to the ground to feel fast/low
 const ALT_MAX = 30; // still nowhere near far enough to reveal curvature
 const START_ALTITUDE = 2;
@@ -38,12 +41,31 @@ const CAM_UP = 0.8; // chase-cam height above the ship, along local up — low a
 const FOG_NEAR = 10;
 const FOG_FAR = 32;
 
+// ---- ring gates / warp drive ----
+const RING_COUNT = 20;
+const RING_NEEDED = 6;
+const RING_RADIUS = 2.2;
+const RING_TUBE = 0.26;
+const RING_CATCH_DIST = 2.8; // generous — this is a fun-first toy, not a threading puzzle
+const RING_SPREAD = 130; // scattered within this many units either side of the start heading
+const RING_ALT_MIN = 5; // clear of the ring's own radius so it never dips into the ground
+const RING_ALT_MAX = 18;
+
+// ---- warp sequence timing (seconds) ----
+const WARP_ROTATE_TIME = 1.0; // belly-forward flip
+const WARP_FLASH_IN = 0.35; // speed ramps up, screen ramps to white
+const WARP_HOLD = 0.25; // fully white — world swap happens here, hidden
+const WARP_FLASH_OUT = 0.55; // speed and flash both ease back down, arrival
+const WARP_SPEED_BOOST = 20; // multiplies SHIP_SPEED at the peak of the jump
+const HALF_PI = Math.PI / 2;
+
 /**
  * @param {HTMLElement} container — empty element to render the canvas into
  * @param {typeof import('three')} THREE
  * @param {() => import('three').Object3D | null} getShipModel — returns a fresh clone, or null
+ * @param {{ blip?: (freq: number) => void }} [audio] — optional, for ring/warp cues
  */
-export function mountArcadeFlight(container, THREE, getShipModel) {
+export function mountArcadeFlight(container, THREE, getShipModel, audio) {
   let disposed = false;
   const width = container.clientWidth || 480;
   const height = container.clientHeight || 280;
@@ -54,17 +76,16 @@ export function mountArcadeFlight(container, THREE, getShipModel) {
   renderer.domElement.style.touchAction = 'none';
   container.appendChild(renderer.domElement);
 
-  const bgColor = 0x03040a;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(bgColor);
-  scene.fog = new THREE.Fog(bgColor, FOG_NEAR, FOG_FAR);
+  scene.background = new THREE.Color(WORLDS.earth.bg);
+  scene.fog = new THREE.Fog(WORLDS.earth.bg, FOG_NEAR, FOG_FAR);
   const camera = new THREE.PerspectiveCamera(65, width / height, 0.1, 400);
 
   scene.add(buildStarfield(THREE));
 
-  const groundTexture = buildGroundTexture(THREE);
+  let groundTexture = buildGroundTexture(THREE, WORLDS.earth);
   const ground = new THREE.Mesh(
-    new THREE.SphereGeometry(EARTH_RADIUS, 48, 48),
+    new THREE.SphereGeometry(WORLD_RADIUS, 48, 48),
     new THREE.MeshStandardMaterial({ map: groundTexture, roughness: 1, metalness: 0 }),
   );
   scene.add(ground);
@@ -90,6 +111,46 @@ export function mountArcadeFlight(container, THREE, getShipModel) {
   scene.environment = envRT.texture;
   pmrem.dispose();
 
+  // ---- ring gates ----
+  const ringGeo = new THREE.TorusGeometry(RING_RADIUS, RING_TUBE, 10, 24);
+  const ringMat = new THREE.MeshStandardMaterial({
+    color: WORLDS.earth.ringColor, emissive: WORLDS.earth.ringColor, emissiveIntensity: 0.6, roughness: 0.4, metalness: 0.2,
+  });
+  let rings = [];
+  let ringsCollected = 0;
+
+  // ---- HUD: warp meter (top-left) + engage button (bottom-center) ----
+  // Two separate top-level elements, not nested — an absolutely-positioned
+  // descendant positions against its nearest positioned ancestor, and the
+  // meter box is sized to fit its own content, not the full viewport.
+  const hud = document.createElement('div');
+  hud.className = 'arcade-hud';
+  hud.innerHTML = `
+    <div class="arcade-hud__world" data-world-label>${WORLDS.earth.label}</div>
+    <div class="arcade-hud__bar-row">
+      <span class="arcade-hud__bar-label">WARP DRIVE</span>
+      <div class="arcade-hud__bar"><div class="arcade-hud__fill" data-warp-fill></div></div>
+    </div>
+  `;
+  container.appendChild(hud);
+  const fillEl = hud.querySelector('[data-warp-fill]');
+  const worldLabelEl = hud.querySelector('[data-world-label]');
+
+  const warpBtnEl = document.createElement('button');
+  warpBtnEl.type = 'button';
+  warpBtnEl.className = 'arcade-hud__warp-btn hidden';
+  warpBtnEl.textContent = '⚡ ENGAGE WARP';
+  container.appendChild(warpBtnEl);
+
+  const flashEl = document.createElement('div');
+  flashEl.className = 'arcade-warp-flash';
+  container.appendChild(flashEl);
+
+  function updateHud() {
+    fillEl.style.width = `${Math.round((ringsCollected / RING_NEEDED) * 100)}%`;
+    warpBtnEl.classList.toggle('hidden', warping || ringsCollected < RING_NEEDED);
+  }
+
   // Flight state: a point on the orbit sphere plus an orthonormal
   // (right / up / forward) frame tangent to it. Yaw steering turns `forward`
   // within that tangent plane; each frame we re-pin the current altitude and
@@ -97,15 +158,80 @@ export function mountArcadeFlight(container, THREE, getShipModel) {
   // whatever height it's currently climbed/dived to. The sphere is only a
   // math device (see file header) — nothing about it is meant to be
   // visually recognizable as a globe.
+  let currentWorldKey = 'earth';
   let altitude = START_ALTITUDE;
   let turnVel = 0; // rad/sec, current yaw rate (momentum)
   let climbVel = 0; // units/sec, current vertical rate (momentum)
-  const pos = new THREE.Vector3(0, 0, EARTH_RADIUS + altitude);
+  const pos = new THREE.Vector3(0, 0, WORLD_RADIUS + altitude);
   const up = pos.clone().normalize();
   const forward = new THREE.Vector3(1, 0, 0)
     .sub(up.clone().multiplyScalar(up.dot(new THREE.Vector3(1, 0, 0))))
     .normalize();
   const right = new THREE.Vector3();
+  right.crossVectors(forward, up).normalize();
+
+  rings = spawnRings(THREE, scene, ringGeo, ringMat, pos, forward, right);
+
+  // ---- warp sequence state ----
+  let warping = false;
+  let warpT = 0;
+  let worldSwapped = false;
+
+  function beginWarp() {
+    if (warping || ringsCollected < RING_NEEDED) return;
+    warping = true;
+    warpT = 0;
+    worldSwapped = false;
+    turnVel = 0;
+    climbVel = 0;
+    audio?.blip?.(220);
+    updateHud();
+  }
+  warpBtnEl.addEventListener('click', (e) => { e.stopPropagation(); beginWarp(); });
+
+  // Tears down the current world's ground/rings and rebuilds the other one,
+  // resetting the ship to a fresh starting pose. Called once, mid-flash,
+  // while the screen is fully white so the swap is never visible.
+  function loadWorld(key) {
+    currentWorldKey = key;
+    const world = WORLDS[key];
+
+    const oldTex = ground.material.map;
+    groundTexture = buildGroundTexture(THREE, world);
+    ground.material.map = groundTexture;
+    ground.material.needsUpdate = true;
+    oldTex?.dispose();
+    scene.background.set(world.bg);
+    scene.fog.color.set(world.bg);
+    ringMat.color.set(world.ringColor);
+    ringMat.emissive.set(world.ringColor);
+    worldLabelEl.textContent = world.label;
+
+    for (const r of rings) scene.remove(r.mesh);
+    altitude = START_ALTITUDE;
+    turnVel = 0;
+    climbVel = 0;
+    pos.set(0, 0, WORLD_RADIUS + altitude);
+    up.copy(pos).normalize();
+    forward.set(1, 0, 0).sub(up.clone().multiplyScalar(up.dot(new THREE.Vector3(1, 0, 0)))).normalize();
+    right.crossVectors(forward, up).normalize();
+    rings = spawnRings(THREE, scene, ringGeo, ringMat, pos, forward, right);
+    ringsCollected = 0;
+    updateHud();
+  }
+
+  function checkRings() {
+    for (const r of rings) {
+      if (r.collected) continue;
+      if (pos.distanceTo(r.mesh.position) < RING_CATCH_DIST) {
+        r.collected = true;
+        scene.remove(r.mesh);
+        ringsCollected = Math.min(RING_NEEDED, ringsCollected + 1);
+        audio?.blip?.(880);
+        updateHud();
+      }
+    }
+  }
 
   // ---- input: pointer-drag (mouse + touch) and arrow/WASD keys ----
   let steerX = 0, steerY = 0;
@@ -155,11 +281,18 @@ export function mountArcadeFlight(container, THREE, getShipModel) {
   const LOCAL_Z = new THREE.Vector3(0, 0, 1);
   const camLookTarget = new THREE.Vector3();
 
-  function frame() {
-    if (disposed) return;
-    requestAnimationFrame(frame);
-    const dt = Math.min(0.05, clock.getDelta());
+  // Moves `pos` forward at `speedMul`x, then re-pins altitude and
+  // re-orthonormalizes the tangent frame. Shared by normal flight and the
+  // warp sequence (which just flies much faster with input locked out).
+  function advanceAlongSurface(dt, speedMul) {
+    pos.addScaledVector(forward, SHIP_SPEED * speedMul * dt);
+    pos.setLength(WORLD_RADIUS + altitude);
+    up.copy(pos).normalize();
+    forward.sub(up.clone().multiplyScalar(forward.dot(up))).normalize();
+    right.crossVectors(forward, up).normalize();
+  }
 
+  function updateFlight(dt) {
     const kx = ((keys.ArrowRight || keys.KeyD) ? 1 : 0) - ((keys.ArrowLeft || keys.KeyA) ? 1 : 0);
     const ky = ((keys.ArrowDown || keys.KeyS) ? 1 : 0) - ((keys.ArrowUp || keys.KeyW) ? 1 : 0);
     const sx = dragging ? steerX : kx;
@@ -178,15 +311,9 @@ export function mountArcadeFlight(container, THREE, getShipModel) {
       turnQuat.setFromAxisAngle(up, turnVel * dt);
       forward.applyQuaternion(turnQuat);
     }
-
     altitude = Math.max(ALT_MIN, Math.min(ALT_MAX, altitude + climbVel * dt));
 
-    // Advance along the surface at the current altitude, then re-square the frame.
-    pos.addScaledVector(forward, SHIP_SPEED * dt);
-    pos.setLength(EARTH_RADIUS + altitude);
-    up.copy(pos).normalize();
-    forward.sub(up.clone().multiplyScalar(forward.dot(up))).normalize();
-    right.crossVectors(forward, up).normalize();
+    advanceAlongSurface(dt, 1);
 
     ship.position.copy(pos);
     baseMatrix.makeBasis(right, up, forward.clone().negate());
@@ -196,6 +323,58 @@ export function mountArcadeFlight(container, THREE, getShipModel) {
     bankQuat.setFromAxisAngle(LOCAL_Z, (turnVel / TURN_MAX) * VISUAL_BANK);
     pitchQuat.setFromAxisAngle(LOCAL_X, (climbVel / CLIMB_MAX) * VISUAL_PITCH);
     ship.quaternion.copy(baseQuat).multiply(pitchQuat).multiply(bankQuat);
+  }
+
+  const T_ROTATE_END = WARP_ROTATE_TIME;
+  const T_FLASHIN_END = T_ROTATE_END + WARP_FLASH_IN;
+  const T_HOLD_END = T_FLASHIN_END + WARP_HOLD;
+  const T_FLASHOUT_END = T_HOLD_END + WARP_FLASH_OUT;
+
+  // Scripted, input-locked sequence: flip belly-forward, blast to warp speed
+  // as the screen goes white, swap worlds while fully hidden, then ease back
+  // in. Still advances `pos` every frame (just much faster during the flash)
+  // so there's no discontinuity when the flash fades and normal flight resumes.
+  function updateWarp(dt) {
+    warpT += dt;
+    let pitchExtra, speedMul, flash;
+    if (warpT < T_ROTATE_END) {
+      const p = warpT / WARP_ROTATE_TIME;
+      pitchExtra = p * HALF_PI; speedMul = 1; flash = 0;
+    } else if (warpT < T_FLASHIN_END) {
+      const p = (warpT - T_ROTATE_END) / WARP_FLASH_IN;
+      pitchExtra = HALF_PI; speedMul = 1 + p * (WARP_SPEED_BOOST - 1); flash = p;
+    } else if (warpT < T_HOLD_END) {
+      pitchExtra = HALF_PI; speedMul = WARP_SPEED_BOOST; flash = 1;
+      if (!worldSwapped) { worldSwapped = true; loadWorld(currentWorldKey === 'earth' ? 'alien' : 'earth'); }
+    } else if (warpT < T_FLASHOUT_END) {
+      const p = (warpT - T_HOLD_END) / WARP_FLASH_OUT;
+      pitchExtra = (1 - p) * HALF_PI; speedMul = WARP_SPEED_BOOST - p * (WARP_SPEED_BOOST - 1); flash = 1 - p;
+    } else {
+      pitchExtra = 0; speedMul = 1; flash = 0;
+      warping = false;
+      updateHud();
+    }
+
+    flashEl.style.opacity = String(flash);
+    advanceAlongSurface(dt, speedMul);
+    ship.position.copy(pos);
+    baseMatrix.makeBasis(right, up, forward.clone().negate());
+    baseQuat.setFromRotationMatrix(baseMatrix);
+    pitchQuat.setFromAxisAngle(LOCAL_X, pitchExtra);
+    ship.quaternion.copy(baseQuat).multiply(pitchQuat);
+  }
+
+  function frame() {
+    if (disposed) return;
+    requestAnimationFrame(frame);
+    const dt = Math.min(0.05, clock.getDelta());
+
+    if (warping) {
+      updateWarp(dt);
+    } else {
+      updateFlight(dt);
+      checkRings();
+    }
 
     // Low chase-cam, looking ahead and slightly down at the terrain — a
     // normal flight-cam, not one that tries to frame a "planet."
@@ -227,6 +406,9 @@ export function mountArcadeFlight(container, THREE, getShipModel) {
     envRT.dispose();
     renderer.dispose();
     canvas.remove();
+    hud.remove();
+    warpBtnEl.remove();
+    flashEl.remove();
   }
 
   return { dispose };
@@ -247,6 +429,40 @@ function buildStarfield(THREE) {
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   // fog:false — stars sit far beyond the fog distance and should stay visible.
   return new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.8, fog: false }));
+}
+
+// A random horizontal (tangent-to-surface) direction at a given "up" — used
+// so ring gates stand up like hoops rather than lying flat on the ground.
+function randomTangentDir(THREE, up) {
+  const v = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+  v.sub(up.clone().multiplyScalar(v.dot(up)));
+  if (v.lengthSq() < 1e-6) { v.set(1, 0, 0).sub(up.clone().multiplyScalar(up.x)); }
+  return v.normalize();
+}
+
+// Scatters RING_COUNT ring gates in the tangent plane around `originPos`,
+// biased ahead of the current heading so a player flying roughly straight
+// from a fresh start actually encounters some. A torus's default "through"
+// axis is local Z, so aligning that to a random horizontal tangent direction
+// makes it stand up like a hoop (roll around that axis doesn't matter —
+// the ring is circularly symmetric).
+function spawnRings(THREE, scene, geo, mat, originPos, originForward, originRight) {
+  const rings = [];
+  for (let i = 0; i < RING_COUNT; i++) {
+    const dx = (Math.random() * 2 - 1) * RING_SPREAD;
+    const dz = 30 + Math.random() * RING_SPREAD;
+    const alt = RING_ALT_MIN + Math.random() * (RING_ALT_MAX - RING_ALT_MIN);
+    const p = originPos.clone().addScaledVector(originRight, dx).addScaledVector(originForward, dz);
+    p.setLength(WORLD_RADIUS + alt);
+    const ringUp = p.clone().normalize();
+    const heading = randomTangentDir(THREE, ringUp);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(p);
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), heading);
+    scene.add(mesh);
+    rings.push({ mesh, collected: false });
+  }
+  return rings;
 }
 
 // Rough, simplified silhouettes of real continents (normalized 0..1 coords,
@@ -277,6 +493,36 @@ const CONTINENT_SHAPES = [
    [0.75, 0.75], [0.60, 0.85], [0.55, 0.95], [0.45, 0.85], [0.40, 0.65], [0.35, 0.45], [0.30, 0.25]],
 ];
 
+// Jagged, irregular "not from around here" silhouettes for the alien world —
+// same drawing mechanism as CONTINENT_SHAPES, deliberately less regular.
+const ALIEN_SHAPES = [
+  [[0.50, 0.00], [0.65, 0.10], [0.60, 0.25], [0.85, 0.30], [0.70, 0.45], [0.90, 0.55],
+   [0.65, 0.60], [0.70, 0.80], [0.50, 0.75], [0.40, 0.95], [0.30, 0.70], [0.15, 0.75],
+   [0.25, 0.50], [0.05, 0.40], [0.30, 0.35], [0.20, 0.15], [0.40, 0.20]],
+  [[0.40, 0.00], [0.60, 0.05], [0.55, 0.20], [0.75, 0.15], [0.80, 0.35], [0.65, 0.40],
+   [0.85, 0.55], [0.60, 0.60], [0.70, 0.80], [0.45, 0.70], [0.40, 0.95], [0.25, 0.75],
+   [0.10, 0.80], [0.20, 0.55], [0.05, 0.45], [0.25, 0.35], [0.15, 0.15], [0.35, 0.20]],
+];
+
+const WORLDS = {
+  earth: {
+    label: 'EARTH',
+    bg: 0x03040a,
+    ocean: '#123a5e',
+    land: '#2f7a4f',
+    ringColor: 0x2fd4c6,
+    shapes: CONTINENT_SHAPES,
+  },
+  alien: {
+    label: 'UNKNOWN WORLD',
+    bg: 0x160a1f,
+    ocean: '#3a1440',
+    land: '#c2542c',
+    ringColor: 0xff8f52,
+    shapes: ALIEN_SHAPES,
+  },
+};
+
 function drawSilhouette(ctx, shape, cx, cy, scale, rot) {
   const cos = Math.cos(rot), sin = Math.sin(rot);
   ctx.beginPath();
@@ -290,21 +536,22 @@ function drawSilhouette(ctx, shape, cx, cy, scale, rot) {
   ctx.fill();
 }
 
-function buildGroundTexture(THREE) {
+function buildGroundTexture(THREE, world) {
   // Higher-res than the rest of the game's deliberately blocky NearestFilter
   // look — at flight altitude the camera sits close enough to the ground that
   // a coarse/nearest-filtered texture just reads as blocky steps, erasing the
   // silhouettes entirely. Smooth filtering + more source detail is what
-  // actually lets the continent shapes read as shapes while flying past.
+  // actually lets the shapes read as shapes while flying past.
   const canvas = document.createElement('canvas');
   canvas.width = 768;
   canvas.height = 768;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#123a5e';
+  ctx.fillStyle = world.ocean;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#2f7a4f';
+  ctx.fillStyle = world.land;
+  const shapes = world.shapes || CONTINENT_SHAPES;
   for (let i = 0; i < 12; i++) {
-    const shape = CONTINENT_SHAPES[Math.floor(Math.random() * CONTINENT_SHAPES.length)];
+    const shape = shapes[Math.floor(Math.random() * shapes.length)];
     const scale = (45 + Math.random() * 55) * 3;
     const cx = Math.random() * canvas.width;
     const cy = Math.random() * canvas.height;

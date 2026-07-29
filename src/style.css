@@ -322,6 +322,20 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .arcade-overlay__exit:hover { background: rgba(255,176,0,.12); }
 
+.arcade-hud { position: absolute; top: 20px; left: 20px; z-index: 2; pointer-events: none; }
+.arcade-hud__world { color: var(--muted2); font-size: 11px; letter-spacing: .18em; margin-bottom: 6px; text-shadow: 0 0 6px rgba(0,0,0,.8); }
+.arcade-hud__bar-row { display: flex; align-items: center; gap: 8px; }
+.arcade-hud__bar-label { color: var(--teal); font-size: 10px; letter-spacing: .12em; text-shadow: 0 0 6px rgba(0,0,0,.8); }
+.arcade-hud__bar { width: 140px; height: 10px; border: 1px solid var(--teal); background: rgba(10,11,13,.55); }
+.arcade-hud__fill { height: 100%; width: 0%; background: var(--teal); box-shadow: 0 0 8px rgba(47,212,198,.6); }
+.arcade-hud__warp-btn {
+  position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); pointer-events: auto;
+  border: 1px solid var(--amber); background: rgba(10,11,13,.75); color: var(--amber);
+  padding: 12px 26px; font-size: 14px; letter-spacing: .12em; cursor: pointer; animation: pulse 1.4s infinite;
+}
+.arcade-hud__warp-btn:hover { background: rgba(255,176,0,.15); }
+.arcade-warp-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 3; }
+
 /* ===== GoldenEye / N64 stick controls (all devices) ===== */
 .n64-ui { position: absolute; inset: 0; z-index: 31; pointer-events: none; }
 

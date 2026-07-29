@@ -510,7 +510,7 @@ function buildArcadeOverlay(game) {
       const show = !!state.arcadePlaying;
       node.classList.toggle('hidden', !show);
       if (show && !instance && game.THREE) {
-        instance = mountArcadeFlight(stage, game.THREE, game.getSpaceshipModel);
+        instance = mountArcadeFlight(stage, game.THREE, game.getSpaceshipModel, game.audio);
       } else if (!show && instance) {
         instance.dispose();
         instance = null;

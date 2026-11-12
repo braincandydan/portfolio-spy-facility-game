@@ -25,7 +25,7 @@ tracker, dossier, comms, settings) · `Esc` pause/close
 
 ## Make it yours
 
-All placeholder content — your name, bio, links, resume, project list, and
+All content — name, bio, links, experience, case studies, side projects and
 skills — lives in one file:
 
 ```
@@ -34,6 +34,23 @@ src/content.js
 
 Edit that and nothing else needs to change. Screenshots for the project
 cards can go in `public/` and be referenced from there.
+
+## Résumé (plain page + PDF)
+
+The game isn't the only way in. Everything recruiters need lives in the same
+`src/content.js` and is rendered three ways:
+
+- **In the game:** classified dossiers in Hangar-1, skills in SIGINT, résumé in the Data Core.
+- **`resume.html`:** a plain, fast, printable page. The title screen links to it
+  ("Recruiter? Skip the mission").
+- **`public/resume.pdf`:** a text-based PDF for Indeed and other job sites. Its
+  header carries the interactive portfolio link and a QR code.
+
+After editing `src/content.js`, regenerate the PDF and commit it:
+
+```bash
+npm run resume:pdf   # needs Playwright: npm i -D playwright && npx playwright install chromium
+```
 
 ## Project structure
 

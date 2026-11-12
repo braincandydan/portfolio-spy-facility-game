@@ -173,6 +173,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .boot__cta--loading { border-color: var(--amber); color: var(--amber); animation: pulse .9s infinite; }
 .boot__keys { color: var(--muted); font-size: 12px; margin-top: 26px; line-height: 1.8; }
 .boot__err { color: var(--red); font-size: 12px; margin-top: 16px; max-width: 60ch; }
+.boot__skip {
+  margin-top: 22px; color: var(--amber); font-size: 12px; letter-spacing: .14em; text-decoration: none;
+  border-bottom: 1px dashed rgba(255,176,0,.5); padding-bottom: 2px;
+}
+.boot__skip:hover { color: var(--light); border-bottom-color: var(--light); }
 
 /* ===== pause ===== */
 .pause {
@@ -256,6 +261,15 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .panel__heading { font-family: var(--display); font-size: 30px; color: var(--light); letter-spacing: .03em; margin-bottom: 4px; }
 .panel__sub { color: var(--muted); font-size: 12px; margin-bottom: 20px; }
 
+.ops-heading { color: var(--amber); font-size: 12px; letter-spacing: .14em; margin: 18px 0 10px; }
+.ops-heading span { color: var(--muted); letter-spacing: .04em; }
+.dossier-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; margin-bottom: 8px; }
+.dossier { border: 1px solid var(--line); border-left: 3px solid var(--amber); background: var(--panel-bg); padding: 14px 16px; }
+.dossier__code { color: var(--amber); font-size: 11px; letter-spacing: .1em; }
+.dossier__title { color: var(--light); font-family: var(--display); font-size: 18px; margin: 2px 0 8px; }
+.dossier__body { margin: 0; font-size: 12px; color: #9aa0a8; }
+.dossier__body dt { color: var(--teal); font-size: 10px; letter-spacing: .14em; margin-top: 6px; }
+.dossier__body dd { margin: 2px 0 0; }
 .crate-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
 .crate { border: 1px solid var(--line); background: var(--panel-bg); padding: 16px; }
 .crate:hover { border-color: var(--teal); background: #131820; cursor: pointer; }
@@ -267,7 +281,17 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .crate__name { color: var(--light); font-family: var(--display); font-size: 18px; }
 .crate__desc { color: #9aa0a8; font-size: 12px; margin-top: 4px; }
 .crate__tech { color: var(--teal); font-size: 11px; margin-top: 8px; }
+.crate__links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.crate__links a {
+  color: var(--amber); border: 1px solid var(--line2); padding: 4px 10px; font-size: 11px;
+  letter-spacing: 1px; text-decoration: none;
+}
+.crate__links a:hover { border-color: var(--amber); background: #1d1a12; }
 
+.skillset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 16px 24px; }
+.skillset__name { color: var(--light); font-size: 13px; letter-spacing: .1em; margin-bottom: 6px; text-transform: uppercase; }
+.skillset__items { display: flex; flex-wrap: wrap; gap: 6px; }
+.skillset__items span { border: 1px solid var(--line2); color: var(--teal); font-size: 11px; padding: 3px 8px; }
 .skill-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 30px; }
 .skill .row { display: flex; justify-content: space-between; color: var(--light); font-size: 13px; }
 .skill .row .lvl { color: var(--muted); }
@@ -293,6 +317,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .resume-info { flex: 1; min-width: 220px; }
 .resume-info .name { color: var(--light); font-family: var(--display); font-size: 20px; }
 .resume-info .meta { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+.resume-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
 /* Cabinet splash — shown inside the normal sector-access panel; PLAY hands
    off to the full-screen .arcade-overlay below. */

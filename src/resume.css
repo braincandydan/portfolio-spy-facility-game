@@ -1,0 +1,120 @@
+/* Plain résumé page. Light by default (prints and reads like paper); dark on screen if preferred. */
+:root {
+  --bg: #ffffff;
+  --page: #ffffff;
+  --text: #1d2024;
+  --muted: #5b616b;
+  --rule: #d9dde2;
+  --accent: #0d7f76;
+  --banner-bg: #0b0e10;
+  --banner-text: #e8ebf0;
+  --banner-accent: #2fd4c6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d0f12;
+    --page: #111418;
+    --text: #e3e6ea;
+    --muted: #9aa0a8;
+    --rule: #2b2e34;
+    --accent: #2fd4c6;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d0f12; --page: #111418; --text: #e3e6ea; --muted: #9aa0a8; --rule: #2b2e34; --accent: #2fd4c6;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+a { color: var(--accent); }
+
+.resume { max-width: 860px; margin: 0 auto; padding: 0 16px 48px; background: var(--page); }
+
+.mission {
+  display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: space-between; align-items: center;
+  margin: 0 -16px 28px; padding: 12px 16px; background: var(--banner-bg); color: var(--banner-text); font-size: 14px;
+}
+.mission a { color: var(--banner-accent); font-weight: 600; text-decoration: none; }
+.mission a:hover { text-decoration: underline; }
+
+.head { display: flex; gap: 20px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
+.head__main { flex: 1 1 360px; min-width: 0; }
+h1 { margin: 0; font-size: 34px; line-height: 1.1; letter-spacing: -0.01em; }
+.head__title { margin: 6px 0 8px; font-size: 16px; font-weight: 600; color: var(--accent); }
+.head__contacts { margin: 0; color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+.head__contacts a { color: inherit; }
+.head__contacts a, .head__contacts span:not(.sep) { white-space: nowrap; }
+.sep { margin: 0 8px; }
+.head__interactive {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--rule);
+  color: var(--text); text-decoration: none; max-width: 100%;
+}
+.head__interactive:hover { border-color: var(--accent); }
+.head__interactive-text { display: flex; flex-direction: column; font-size: 13px; min-width: 0; }
+.head__interactive-text span { color: var(--muted); overflow-wrap: anywhere; }
+.qr { width: 64px; height: 64px; flex: none; background: #fff; padding: 4px; }
+.qr svg { display: block; width: 100%; height: 100%; }
+
+section { margin-top: 26px; }
+h2 {
+  margin: 0 0 10px; padding-bottom: 4px; border-bottom: 1px solid var(--rule);
+  font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+}
+h3 { margin: 0; font-size: 16px; }
+p { margin: 0 0 6px; }
+
+.job__head { display: flex; justify-content: space-between; gap: 4px 16px; flex-wrap: wrap; align-items: baseline; }
+.job__org { font-weight: 400; color: var(--muted); }
+.job__meta { color: var(--muted); font-size: 14px; }
+.job ul, .side { margin: 8px 0 0; padding-left: 20px; }
+.job li, .side li { margin-bottom: 4px; }
+
+.cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 14px; }
+.case { border-left: 3px solid var(--accent); padding: 2px 0 2px 12px; font-size: 14px; }
+.case h3 { margin-bottom: 4px; font-size: 15px; }
+.case__stack { color: var(--muted); font-size: 13px; }
+
+.skills { margin: 0; display: grid; gap: 6px; }
+.skills div { display: grid; grid-template-columns: 150px 1fr; gap: 12px; }
+.skills dt { font-weight: 600; }
+.skills dd { margin: 0; }
+@media (max-width: 520px) {
+  .skills div { grid-template-columns: 1fr; gap: 0; }
+  h1 { font-size: 28px; }
+}
+
+.side__tech { color: var(--muted); font-size: 13px; }
+.foot { margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 13px; }
+
+/* Print / PDF: paper colors, tighter spacing, no on-screen banner. */
+@page { size: Letter; margin: 0.5in 0.55in; }
+@media print {
+  :root, :root:not([data-theme="light"]) {
+    --bg: #fff; --page: #fff; --text: #111; --muted: #4a4f57; --rule: #c9ced4; --accent: #0b6e66;
+  }
+  body { font-size: 10pt; line-height: 1.36; }
+  .resume { max-width: none; padding: 0; }
+  .no-print { display: none !important; }
+  h1 { font-size: 22pt; }
+  .head__title { font-size: 11.5pt; }
+  .head__contacts { font-size: 9.5pt; }
+  .qr { width: 58px; height: 58px; padding: 0; }
+  section { margin-top: 12pt; }
+  h2 { font-size: 9pt; margin-bottom: 6pt; }
+  h3 { font-size: 11pt; }
+  .case { font-size: 9.5pt; break-inside: avoid; }
+  .case h3 { font-size: 10pt; }
+  .cases { grid-template-columns: 1fr 1fr; gap: 8pt 14pt; }
+  .job li, .side li { margin-bottom: 2pt; }
+  a { color: inherit; text-decoration: none; }
+  .head__interactive { border-color: var(--rule); }
+  h2 { break-after: avoid; }
+  .job, .case, .skills div, .side li { break-inside: avoid; }
+  /* The PDF stays to two pages: experience bullets already state each problem, and side projects get one line. */
+  .case__problem, .side__desc { display: none; }
+  .side__tech::before { content: '— '; }
+}

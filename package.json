@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "resume:pdf": "vite build && node scripts/build-resume-pdf.mjs"
   },
   "dependencies": {
+    "qrcode": "^1.5.4",
     "three": "^0.161.0"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 import { ZONE_ORDER, ZONE_NAMES, ZONE_SUBS } from './game/zones.js';
-import { profile, comms, projects, skills } from './content.js';
+import { profile, comms, projects, dossiers, skillGroups } from './content.js';
 import { isTouchDevice } from './ui/touchControls.js';
 import { mountArcadeFlight } from './game/arcade.js';
 
@@ -246,8 +246,10 @@ function buildBoot(game) {
     <div class="boot__cta" data-cta>▶ ${touch ? 'TAP' : 'CLICK'} TO INSERT CARTRIDGE</div>
     <div class="boot__keys">${keysLine}</div>
     <div class="boot__err hidden" data-err></div>
+    <a class="boot__skip" href="${profile.cv.href}" data-skip>RECRUITER? SKIP THE MISSION → PLAIN RÉSUMÉ</a>
   `);
   node.addEventListener('click', game.start);
+  node.querySelector('[data-skip]').addEventListener('click', (e) => e.stopPropagation());
   decryptText(node.querySelector('[data-title]'), 'DAN DONNELLY');
   const ctaNode = node.querySelector('[data-cta]');
   return {
@@ -389,8 +391,8 @@ function renderWatchTab(game, state, visited, total) {
       <div class="watch__dossier-role">${profile.codename}</div>
       <p class="watch__dossier-bio">${profile.bio}</p>
       <div class="watch__dossier-links">
-        <a class="btn-solid" href="${profile.resume.href}">⬇ DOWNLOAD RESUME.PDF</a>
-        <a class="btn-outline" href="${profile.cv.href}">◈ VIEW CV</a>
+        <a class="btn-solid" href="${profile.resume.href}" download>⬇ DOWNLOAD RESUME.PDF</a>
+        <a class="btn-outline" href="${profile.cv.href}" target="_blank" rel="noopener">◈ ${profile.cv.label}</a>
       </div>
     `;
   }
@@ -557,6 +559,22 @@ function renderPanelBody(panelId) {
     return `
       <div class="panel__heading">RECOVERED CRAFT — PROJECT FILES</div>
       <div class="panel__sub">Reverse-engineering reports. Accessing this terminal unseals the maintenance vent into SIGINT.</div>
+      <div class="ops-heading">▲ CLASSIFIED OPERATIONS <span>— systems work · client details redacted</span></div>
+      <div class="dossier-grid">
+        ${dossiers.map((d) => `
+          <article class="dossier">
+            <div class="dossier__code">${d.code} · ${d.name}</div>
+            <div class="dossier__title">${d.title}</div>
+            <dl class="dossier__body">
+              <dt>PROBLEM</dt><dd>${d.problem}</dd>
+              <dt>BUILT</dt><dd>${d.built}</dd>
+              <dt>OUTCOME</dt><dd>${d.outcome}</dd>
+            </dl>
+            <div class="crate__tech">${d.stack}</div>
+          </article>
+        `).join('')}
+      </div>
+      <div class="ops-heading">◆ SIDE OPS <span>— personal builds · live demos</span></div>
       <div class="crate-grid">
         ${projects.map((p) => `
           <div class="crate">
@@ -575,11 +593,11 @@ function renderPanelBody(panelId) {
     return `
       <div class="panel__heading">SIGINT — DECRYPTED CAPABILITIES</div>
       <div class="panel__sub">Digital intercepts. Accessing the archive hands you the master key.</div>
-      <div class="skill-grid">
-        ${skills.map((k) => `
-          <div class="skill">
-            <div class="row"><span>${k.name}</span><span class="lvl">${k.lvl}</span></div>
-            <div class="bar"><div class="fill" style="width:${k.pct}%"></div></div>
+      <div class="skillset-grid">
+        ${skillGroups.map((g) => `
+          <div class="skillset">
+            <div class="skillset__name">${g.name}</div>
+            <div class="skillset__items">${g.items.map((i) => `<span>${i}</span>`).join('')}</div>
           </div>
         `).join('')}
       </div>
@@ -629,7 +647,10 @@ function renderPanelBody(panelId) {
         <div class="resume-info">
           <div class="name">${profile.resume.label}</div>
           <div class="meta">${profile.resume.meta}</div>
-          <a class="btn-solid" href="${profile.resume.href}">⬇ DOWNLOAD</a>
+          <div class="resume-actions">
+            <a class="btn-solid" href="${profile.resume.href}" download>⬇ DOWNLOAD PDF</a>
+            <a class="btn-outline" href="${profile.cv.href}" target="_blank" rel="noopener">◈ ${profile.cv.label}</a>
+          </div>
         </div>
       </div>
     `;

@@ -47,6 +47,7 @@ export const projects = [
     desc: 'Parametric 3D model generator in the browser: size a wall hook with sliders and export print-ready STL files. Screw length and gauge are derived from the geometry and filament type.',
     tech: 'Three.js · CSG · TypeScript · Vite',
     links: [
+      { label: 'LIVE', href: 'https://braincandydan.github.io/Model-Gen/' },
       { label: 'SOURCE', href: 'https://github.com/braincandydan/Model-Gen' },
     ],
   },
@@ -57,6 +58,7 @@ export const projects = [
     desc: 'Type a message and watch it become a Zodiac-style homophonic cipher, with a live frequency analysis showing why the technique hides patterns and how these ciphers were cracked.',
     tech: 'Vanilla JS · SVG · Cryptography',
     links: [
+      { label: 'LIVE', href: 'https://braincandydan.github.io/zodiax/' },
       { label: 'SOURCE', href: 'https://github.com/braincandydan/zodiax' },
     ],
   },
@@ -67,6 +69,7 @@ export const projects = [
     desc: 'Arcade downhill skiing game: carve between trees, chase a best score. Sprite animation, tuned physics, and touch controls for mobile.',
     tech: 'Next.js · React · Canvas · TypeScript',
     links: [
+      { label: 'LIVE', href: 'https://braincandydan.github.io/ski-app/' },
       { label: 'SOURCE', href: 'https://github.com/braincandydan/ski-app' },
     ],
   },

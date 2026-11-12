@@ -561,10 +561,11 @@ function renderPanelBody(panelId) {
         ${projects.map((p) => `
           <div class="crate">
             <div class="crate__thumb">▦ SCREENSHOT</div>
-            <div class="crate__no">CRAFT ${p.no}</div>
+            <div class="crate__no">CRAFT ${p.no}${p.codename ? ` · ${p.codename}` : ''}</div>
             <div class="crate__name">${p.name}</div>
             <div class="crate__desc">${p.desc}</div>
             <div class="crate__tech">${p.tech}</div>
+            ${p.links?.length ? `<div class="crate__links">${p.links.map((l) => `<a href="${l.href}" target="_blank" rel="noopener">${l.label} ↗</a>`).join('')}</div>` : ''}
           </div>
         `).join('')}
       </div>

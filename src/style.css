@@ -267,6 +267,12 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .crate__name { color: var(--light); font-family: var(--display); font-size: 18px; }
 .crate__desc { color: #9aa0a8; font-size: 12px; margin-top: 4px; }
 .crate__tech { color: var(--teal); font-size: 11px; margin-top: 8px; }
+.crate__links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.crate__links a {
+  color: var(--amber); border: 1px solid var(--line2); padding: 4px 10px; font-size: 11px;
+  letter-spacing: 1px; text-decoration: none;
+}
+.crate__links a:hover { border-color: var(--amber); background: #1d1a12; }
 
 .skill-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 30px; }
 .skill .row { display: flex; justify-content: space-between; color: var(--light); font-size: 13px; }

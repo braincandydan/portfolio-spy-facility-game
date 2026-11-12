@@ -27,11 +27,49 @@ export const comms = [
   { icon: '◈', label: 'BASE', value: 'Kelowna, BC — Canada', href: '#' },
 ];
 
+// links: optional list of { label, href } shown as buttons on the card.
 export const projects = [
-  { no: '01', name: 'PROJECT ALPHA', desc: 'Short one-line description of the work.', tech: 'React · Node · Postgres' },
-  { no: '02', name: 'PROJECT BRAVO', desc: 'What it does and why it mattered.', tech: 'TypeScript · WebGL' },
-  { no: '03', name: 'PROJECT CHARLIE', desc: 'Outcome or metric goes here.', tech: 'Python · ML' },
-  { no: '04', name: 'PROJECT DELTA', desc: 'Add your own — this is a placeholder.', tech: 'Swift · iOS' },
+  {
+    no: '01',
+    name: 'GROC',
+    codename: 'OPERATION SUPPLY LINE',
+    desc: 'Grocery-deal finder: scrapes every flyer for a postal code daily, parses messy prices ("2 for $5", "was/now"), and lets you search or ask an AI that only answers from real flyer data.',
+    tech: 'Python · Flask · Postgres · Claude API · GitHub Actions',
+    links: [
+      { label: 'LIVE', href: 'https://groc-2.vercel.app' },
+      { label: 'SOURCE', href: 'https://github.com/braincandydan/groc' },
+    ],
+  },
+  {
+    no: '02',
+    name: 'HOOK GENERATOR',
+    codename: 'OPERATION FABRICATOR',
+    desc: 'Parametric 3D model generator in the browser: size a wall hook with sliders and export print-ready STL files. Screw length and gauge are derived from the geometry and filament type.',
+    tech: 'Three.js · CSG · TypeScript · Vite',
+    links: [
+      { label: 'SOURCE', href: 'https://github.com/braincandydan/Model-Gen' },
+    ],
+  },
+  {
+    no: '03',
+    name: 'ZODIAX',
+    codename: 'OPERATION CIPHER',
+    desc: 'Type a message and watch it become a Zodiac-style homophonic cipher, with a live frequency analysis showing why the technique hides patterns and how these ciphers were cracked.',
+    tech: 'Vanilla JS · SVG · Cryptography',
+    links: [
+      { label: 'SOURCE', href: 'https://github.com/braincandydan/zodiax' },
+    ],
+  },
+  {
+    no: '04',
+    name: 'SKI RUN',
+    codename: 'OPERATION BLACK DIAMOND',
+    desc: 'Arcade downhill skiing game: carve between trees, chase a best score. Sprite animation, tuned physics, and touch controls for mobile.',
+    tech: 'Next.js · React · Canvas · TypeScript',
+    links: [
+      { label: 'SOURCE', href: 'https://github.com/braincandydan/ski-app' },
+    ],
+  },
 ];
 
 export const skills = [

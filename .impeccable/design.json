@@ -1,0 +1,550 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-15T22:05:13Z",
+  "title": "Design System: Field Operative Portfolio",
+  "extensions": {
+    "colorMeta": {
+      "signal-amber": {
+        "role": "primary",
+        "displayName": "Signal Amber",
+        "canonical": "#ffb000",
+        "tonalRamp": [
+          "#3c2f10",
+          "#6c5113",
+          "#a27510",
+          "#df9c07",
+          "#f5b933",
+          "#edc978",
+          "#eddcb5",
+          "#f8f4ec"
+        ]
+      },
+      "phosphor-teal": {
+        "role": "primary",
+        "displayName": "Phosphor Teal",
+        "canonical": "#2fd4c6",
+        "tonalRamp": [
+          "#183532",
+          "#225d58",
+          "#298981",
+          "#2cbaae",
+          "#54d4c9",
+          "#8cd9d2",
+          "#bfe4e1",
+          "#eef6f5"
+        ]
+      },
+      "alarm-red": {
+        "role": "secondary",
+        "displayName": "Alarm Red",
+        "canonical": "#ff5a52",
+        "tonalRamp": [
+          "#3c1210",
+          "#6c1713",
+          "#a21710",
+          "#df1107",
+          "#f53c33",
+          "#ed7e78",
+          "#edb7b5",
+          "#f8edec"
+        ]
+      },
+      "warning-orange": {
+        "role": "secondary",
+        "displayName": "Warning Orange",
+        "canonical": "#ff8f52",
+        "tonalRamp": [
+          "#3c2010",
+          "#6c3313",
+          "#a24410",
+          "#df5307",
+          "#f57733",
+          "#eda178",
+          "#edc9b5",
+          "#f8f1ec"
+        ]
+      },
+      "void-black": {
+        "role": "neutral",
+        "displayName": "Void Black",
+        "canonical": "#0a0b0d",
+        "tonalRamp": [
+          "#232529",
+          "#3a3e46",
+          "#505663",
+          "#656e81",
+          "#8790a1",
+          "#abb0ba",
+          "#cdd0d5",
+          "#f1f2f3"
+        ]
+      },
+      "boot-black": {
+        "role": "neutral",
+        "displayName": "Boot Black",
+        "canonical": "#07080a",
+        "tonalRamp": [
+          "#22252a",
+          "#383d48",
+          "#4c5566",
+          "#606c86",
+          "#838ea5",
+          "#a8afbd",
+          "#cccfd6",
+          "#f1f2f3"
+        ]
+      },
+      "console-panel": {
+        "role": "neutral",
+        "displayName": "Console Panel",
+        "canonical": "#111418",
+        "tonalRamp": [
+          "#22262a",
+          "#383f47",
+          "#4d5766",
+          "#607085",
+          "#8392a4",
+          "#a9b1bc",
+          "#ccd0d6",
+          "#f1f2f3"
+        ]
+      },
+      "console-panel-deep": {
+        "role": "neutral",
+        "displayName": "Console Panel Deep",
+        "canonical": "#0d0f12",
+        "tonalRamp": [
+          "#23262a",
+          "#393e47",
+          "#4d5765",
+          "#616f84",
+          "#8491a4",
+          "#a9b1bc",
+          "#cdd0d6",
+          "#f1f2f3"
+        ]
+      },
+      "scene-slate": {
+        "role": "neutral",
+        "displayName": "Scene Slate",
+        "canonical": "#1a1d22",
+        "tonalRamp": [
+          "#232629",
+          "#3a3e46",
+          "#4f5763",
+          "#646f81",
+          "#8791a1",
+          "#abb1ba",
+          "#cdd0d5",
+          "#f1f2f3"
+        ]
+      },
+      "readout-white": {
+        "role": "neutral",
+        "displayName": "Readout White",
+        "canonical": "#e8ebf0",
+        "tonalRamp": [
+          "#22252b",
+          "#363d49",
+          "#4a5569",
+          "#5c6d89",
+          "#808fa8",
+          "#a6afbf",
+          "#cbd0d7",
+          "#f1f2f3"
+        ]
+      },
+      "console-text": {
+        "role": "neutral",
+        "displayName": "Console Text",
+        "canonical": "#c9cdd4",
+        "tonalRamp": [
+          "#242629",
+          "#3b3e45",
+          "#515762",
+          "#676f7f",
+          "#89919f",
+          "#acb1b9",
+          "#ced0d4",
+          "#f2f2f3"
+        ]
+      },
+      "dim-label": {
+        "role": "neutral",
+        "displayName": "Dim Label",
+        "canonical": "#6b7079",
+        "tonalRamp": [
+          "#252628",
+          "#3d3f42",
+          "#55585e",
+          "#6c7179",
+          "#8e929a",
+          "#afb1b6",
+          "#cfd1d3",
+          "#f2f2f3"
+        ]
+      },
+      "dim-label-light": {
+        "role": "neutral",
+        "displayName": "Dim Label Light",
+        "canonical": "#8a8f97",
+        "tonalRamp": [
+          "#252628",
+          "#3d3f42",
+          "#55585e",
+          "#6c7179",
+          "#8e939a",
+          "#afb2b6",
+          "#cfd1d3",
+          "#f2f2f3"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#2b2e34",
+        "tonalRamp": [
+          "#242628",
+          "#3c3e44",
+          "#525760",
+          "#696f7d",
+          "#8b919d",
+          "#adb1b8",
+          "#ced0d4",
+          "#f2f2f3"
+        ]
+      },
+      "hairline-soft": {
+        "role": "neutral",
+        "displayName": "Hairline Soft",
+        "canonical": "#24272d",
+        "tonalRamp": [
+          "#242529",
+          "#3b3e45",
+          "#515761",
+          "#676f7f",
+          "#89909f",
+          "#acb0b9",
+          "#ced0d4",
+          "#f2f2f3"
+        ]
+      },
+      "hairline-deep": {
+        "role": "neutral",
+        "displayName": "Hairline Deep",
+        "canonical": "#16191d",
+        "tonalRamp": [
+          "#232629",
+          "#3a3f46",
+          "#4f5863",
+          "#647182",
+          "#8792a1",
+          "#abb1ba",
+          "#cdd1d5",
+          "#f1f2f3"
+        ]
+      },
+      "paper-white": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#595959",
+          "#737373",
+          "#949494",
+          "#b2b2b2",
+          "#d1d1d1",
+          "#f2f2f2"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1d2024",
+        "tonalRamp": [
+          "#242629",
+          "#3b3f45",
+          "#515861",
+          "#67717e",
+          "#89929e",
+          "#acb2b9",
+          "#ced1d4",
+          "#f2f2f3"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "canonical": "#5b616b",
+        "tonalRamp": [
+          "#242628",
+          "#3c3f43",
+          "#53585f",
+          "#6a717b",
+          "#8c929c",
+          "#aeb1b7",
+          "#cfd1d3",
+          "#f2f2f3"
+        ]
+      },
+      "paper-rule": {
+        "role": "neutral",
+        "displayName": "Paper Rule",
+        "canonical": "#d9dde2",
+        "tonalRamp": [
+          "#232629",
+          "#3a3f46",
+          "#4f5863",
+          "#647181",
+          "#8792a1",
+          "#abb2ba",
+          "#cdd1d5",
+          "#f1f2f3"
+        ]
+      },
+      "print-teal": {
+        "role": "primary",
+        "displayName": "Print Teal",
+        "canonical": "#0d7f76",
+        "tonalRamp": [
+          "#143835",
+          "#1b645e",
+          "#1e958b",
+          "#1bcbbd",
+          "#45e3d6",
+          "#83e2da",
+          "#bae8e4",
+          "#edf7f6"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Decrypting name on the title screen only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Panel headings and the HUD sector readout."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card and dossier names."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Everything the console prints: descriptions, watch content."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase tracked HUD labels, tabs, buttons and code lines."
+      },
+      "resume-heading": {
+        "displayName": "Printout Name",
+        "purpose": "Name at the top of the résumé page and PDF."
+      },
+      "resume-body": {
+        "displayName": "Printout Body",
+        "purpose": "Running text on the résumé page and PDF."
+      },
+      "resume-section-label": {
+        "displayName": "Printout Section Label",
+        "purpose": "Uppercase section headings on the résumé."
+      }
+    },
+    "shadows": [
+      {
+        "name": "live-halo-teal",
+        "value": "0 0 14px rgba(47,212,198,.25)",
+        "purpose": "Interaction prompt and active stick."
+      },
+      {
+        "name": "panel-halo",
+        "value": "0 0 50px rgba(47,212,198,.15)",
+        "purpose": "Content panel against the scrim."
+      },
+      {
+        "name": "alert-halo-amber",
+        "value": "0 0 20px rgba(255,176,0,.3)",
+        "purpose": "Toasts."
+      },
+      {
+        "name": "alarm-halo-red",
+        "value": "0 0 14px rgba(255,90,82,.3)",
+        "purpose": "Lock banners."
+      },
+      {
+        "name": "hud-legibility",
+        "value": "0 1px 2px #000, 0 -1px 2px #000, 1px 0 2px #000, -1px 0 2px #000, 0 0 6px rgba(0,0,0,.8)",
+        "purpose": "Text-shadow on all HUD text over the 3D scene."
+      },
+      {
+        "name": "watch-hardware",
+        "value": "0 24px 60px rgba(0,0,0,.7), inset 0 2px 4px rgba(255,255,255,.12)",
+        "purpose": "The wristwatch bezel only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "pulse-prompt",
+        "value": "pulse 1.6s infinite",
+        "purpose": "Interaction prompt and interact button: opacity 1 → .35."
+      },
+      {
+        "name": "pulse-cta",
+        "value": "pulse 1.8s infinite",
+        "purpose": "Title-screen and pause calls to action."
+      },
+      {
+        "name": "crt-flicker",
+        "value": "flick 6s infinite steps(1)",
+        "purpose": "Scanline opacity flicker."
+      },
+      {
+        "name": "crt-sweep",
+        "value": "sweep 7s linear infinite",
+        "purpose": "Slow phosphor sweep down the screen."
+      },
+      {
+        "name": "ticker",
+        "value": "tick 34s linear infinite",
+        "purpose": "Bottom objective ticker scroll."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "@media (prefers-reduced-motion: reduce) → animation: none",
+        "purpose": "Every pulse, flicker and sweep stops for reduced-motion users."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "640px"
+      },
+      {
+        "name": "resume-skills-stack",
+        "value": "520px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Solid Button",
+      "kind": "button",
+      "refersTo": "button-solid",
+      "description": "The single most important action in a view (e.g. Download PDF).",
+      "html": "<a class=\"ds-btn-solid\" href=\"#\">⬇ DOWNLOAD PDF</a>",
+      "css": ".ds-btn-solid { display:inline-block; font-family:'Share Tech Mono', monospace; font-size:12px; letter-spacing:.1em; color:#0b0e10; background:#ffb000; border:1px solid #ffb000; padding:8px 16px; text-decoration:none; } .ds-btn-solid:hover { background:#ffc233; } .ds-btn-solid:focus-visible { outline:2px solid #2fd4c6; outline-offset:2px; border-radius:2px; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary actions and project links.",
+      "html": "<a class=\"ds-btn-outline\" href=\"#\">◈ PLAIN RÉSUMÉ</a>",
+      "css": ".ds-btn-outline { display:inline-block; font-family:'Share Tech Mono', monospace; font-size:12px; letter-spacing:.1em; color:#2fd4c6; background:transparent; border:1px solid #2fd4c6; padding:8px 16px; text-decoration:none; } .ds-btn-outline:hover { color:#ffb000; border-color:#ffb000; } .ds-btn-outline:focus-visible { outline:2px solid #2fd4c6; outline-offset:2px; border-radius:2px; }"
+    },
+    {
+      "name": "HUD Prompt",
+      "kind": "custom",
+      "refersTo": "hud-prompt",
+      "description": "Pulsing interaction prompt just below screen centre.",
+      "html": "<div class=\"ds-prompt\"><span class=\"ds-key\">[E]</span> ACCESS CRAFT ANALYSIS</div>",
+      "css": ".ds-prompt { display:inline-block; font-family:'Share Tech Mono', monospace; font-size:14px; letter-spacing:.08em; color:#e8ebf0; background:rgba(10,11,13,.78); border:1px solid #2fd4c6; padding:10px 18px; box-shadow:0 0 14px rgba(47,212,198,.25); animation:ds-pulse 1.6s infinite; } .ds-prompt:hover { background:rgba(47,212,198,.16); border-color:#ffb000; } .ds-key { color:#ffb000; } @keyframes ds-pulse { 0%,100% { opacity:1; } 50% { opacity:.35; } } @media (prefers-reduced-motion: reduce) { .ds-prompt { animation:none; } }"
+    },
+    {
+      "name": "Dossier Card",
+      "kind": "card",
+      "refersTo": "card-dossier",
+      "description": "Classified operation (case study) in the hangar.",
+      "html": "<article class=\"ds-dossier\"><div class=\"ds-code\">OP-FREIGHT · FREIGHT HUB</div><div class=\"ds-title\">Shipping &amp; commercial invoice integration</div><dl><dt>PROBLEM</dt><dd>Shipments booked in carrier portals, invoices typed by hand.</dd><dt>BUILT</dt><dd>A shipment tab on the order with the Freightcom API.</dd></dl><div class=\"ds-stack\">Salesforce · Apex · Freightcom API</div></article>",
+      "css": ".ds-dossier { max-width:340px; font-family:'Share Tech Mono', monospace; background:#111418; border:1px solid #2b2e34; border-left:3px solid #ffb000; padding:14px 16px; color:#9aa0a8; font-size:12px; } .ds-code { color:#ffb000; font-size:11px; letter-spacing:.1em; } .ds-title { font-family:'Oswald', sans-serif; color:#e8ebf0; font-size:18px; margin:2px 0 8px; } .ds-dossier dl { margin:0; } .ds-dossier dt { color:#2fd4c6; font-size:10px; letter-spacing:.14em; margin-top:6px; } .ds-dossier dd { margin:2px 0 0; } .ds-stack { color:#2fd4c6; font-size:11px; margin-top:8px; }"
+    },
+    {
+      "name": "Crate Card",
+      "kind": "card",
+      "refersTo": "card-crate",
+      "description": "Side project card with codename, tech line and links.",
+      "html": "<div class=\"ds-crate\"><div class=\"ds-thumb\">▦ SCREENSHOT</div><div class=\"ds-no\">CRAFT 01 · OPERATION SUPPLY LINE</div><div class=\"ds-name\">GROC</div><div class=\"ds-desc\">Grocery-deal finder with grounded AI answers.</div><div class=\"ds-tech\">Python · Flask · Postgres</div></div>",
+      "css": ".ds-crate { max-width:260px; font-family:'Share Tech Mono', monospace; background:#111418; border:1px solid #2b2e34; padding:16px; } .ds-crate:hover { border-color:#2fd4c6; background:#131820; } .ds-thumb { height:110px; background:repeating-linear-gradient(45deg,#1a1d22,#1a1d22 8px,#15181c 8px,#15181c 16px); border:1px solid #24272d; display:flex; align-items:center; justify-content:center; color:#4c525b; font-size:11px; } .ds-no { color:#ffb000; font-size:11px; margin-top:12px; } .ds-name { font-family:'Oswald', sans-serif; color:#e8ebf0; font-size:18px; } .ds-desc { color:#9aa0a8; font-size:12px; margin-top:4px; } .ds-tech { color:#2fd4c6; font-size:11px; margin-top:8px; }"
+    },
+    {
+      "name": "Skill Chip",
+      "kind": "chip",
+      "refersTo": "chip-skill",
+      "description": "One skill inside a SIGINT skill group.",
+      "html": "<span class=\"ds-chip\">Apex</span> <span class=\"ds-chip\">Flows</span>",
+      "css": ".ds-chip { display:inline-block; font-family:'Share Tech Mono', monospace; font-size:11px; color:#2fd4c6; border:1px solid #24272d; padding:3px 8px; }"
+    },
+    {
+      "name": "Watch Tabs",
+      "kind": "nav",
+      "refersTo": "watch-tab",
+      "description": "Vertical tab rail inside the wristwatch.",
+      "html": "<nav class=\"ds-tabs\"><button class=\"ds-tab ds-tab--active\">◇ NAV</button><button class=\"ds-tab\">◆ INTEL</button><button class=\"ds-tab\">▤ DOSSIER</button></nav>",
+      "css": ".ds-tabs { display:flex; flex-direction:column; gap:2px; width:150px; background:#0b0e10; padding:12px 0; } .ds-tab { font-family:'Share Tech Mono', monospace; font-size:12px; letter-spacing:.12em; color:#6b7079; background:none; border:none; border-left:3px solid transparent; padding:9px 18px; text-align:left; cursor:pointer; } .ds-tab:hover { color:#e8ebf0; } .ds-tab--active { border-left-color:#2fd4c6; background:rgba(47,212,198,.1); color:#e8ebf0; } .ds-tab:focus-visible { outline:2px solid #2fd4c6; outline-offset:2px; }"
+    },
+    {
+      "name": "Printout Case Study",
+      "kind": "card",
+      "description": "Case study on the plain résumé page and PDF.",
+      "html": "<article class=\"ds-case\"><h3>Quote-to-order rebuild</h3><p><strong>Built:</strong> Grouped quote lines with fees and automatic numbering.</p><p class=\"ds-case-stack\">Salesforce · Flows · Apex</p></article>",
+      "css": ".ds-case { max-width:380px; font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; line-height:1.5; color:#1d2024; background:#fff; border-left:3px solid #0d7f76; padding:2px 0 2px 12px; } .ds-case h3 { margin:0 0 4px; font-size:15px; } .ds-case p { margin:0 0 6px; } .ds-case-stack { color:#5b616b; font-size:13px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The N64 Cartridge",
+    "overview": "The portfolio is a late-90s console game first. It boots like a cartridge (\"click to insert cartridge\"), renders a chunky, pixelated 3D facility through a CRT (scanlines, vignette, a slow phosphor sweep), and talks to the player through a GoldenEye-style HUD: a bottom-centre analog stick, round face buttons, corner readouts, a crosshair and a scrolling ticker. The nostalgia is the point. Every interface element should feel like it shipped on that cartridge: square, tracked, monospaced, lit from within, sitting over a dark scene.\n\nDensity is low and deliberate. The 3D scene owns the screen; interface sits at the edges (corner readouts, ticker, controller) or in modal overlays (the wristwatch, content panels, dialogue). Overlays dim the scene rather than replacing it, so the player never forgets they are inside the facility.\n\nThe plain résumé (`resume.html` and `public/resume.pdf`) is the one deliberate exception: the declassified printout from the mission. It is quiet, paper-like and system-fonted, borrowing only a teal accent rule from the game. It must never adopt the CRT, glow or mono styling, because its readers are recruiters, applicant-tracking systems and printers.",
+    "keyCharacteristics": [
+      "Near-black console surfaces under a pixelated 3D scene, with CRT scanlines and vignette on top.",
+      "Two signal colours, amber and teal, glowing against near-black; red and orange only for alarms and destructive actions.",
+      "Oswald for big readouts and headings; Share Tech Mono for everything the console \"prints\".",
+      "Square corners and 1px hairlines everywhere; roundness only on physical hardware (the watch, the controller).",
+      "Glow means \"live\": prompts, active controls and focus get a soft coloured halo; static content does not."
+    ],
+    "rules": [
+      {
+        "name": "The Glow-Means-Live Rule",
+        "body": "A coloured `box-shadow` or `text-shadow` halo appears only on things that are interactive, active or alerting right now: the interaction prompt, a pressed stick, the focus ring, toasts. Static text and cards never glow.",
+        "section": "colors"
+      },
+      {
+        "name": "The Paper-Stays-Paper Rule",
+        "body": "Nothing from the console palette except one teal accent reaches the printout. No near-black backgrounds, glows or amber on `resume.html` in light mode or in the PDF.",
+        "section": "colors"
+      },
+      {
+        "name": "The Console-Prints-Mono Rule",
+        "body": "Anything the facility \"says\" (labels, readouts, descriptions, prompts, buttons) is Share Tech Mono. Oswald is only for big numbers, names and headings.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tracked-Caps Rule",
+        "body": "Labels and buttons are uppercase with 0.08–0.2em letter-spacing. Sentence case is for running text only.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-Console Rule",
+        "body": "Screens and panels are flat. Drop shadows belong to physical objects (the watch); everything else gets depth from scrims and halos.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep every new interface element square-cornered with a 1px hairline border and tracked uppercase mono labels.",
+      "**Do** reserve glow for live, interactive or alerting elements, as in the Glow-Means-Live Rule.",
+      "**Do** keep HUD text legible over the 3D scene with the black text-shadow outline and a translucent Void Black backing.",
+      "**Do** keep the 3D scene visible behind overlays (a scrim, never an opaque page) except on the title screen and the arcade.",
+      "**Do** honour `prefers-reduced-motion` for every new pulse, flicker or sweep.",
+      "**Do** keep the printout plain: system fonts, paper colours, one teal accent."
+    ],
+    "donts": [
+      "**Don't** add rounded corners, soft cards or pill buttons to console surfaces; roundness belongs to hardware only.",
+      "**Don't** introduce new accent colours, or use red or orange for anything except alarms and destructive actions.",
+      "**Don't** set body text in Oswald or headings in a third typeface.",
+      "**Don't** bring CRT effects, glows, mono type or near-black backgrounds onto the light-mode résumé page or the PDF.",
+      "**Don't** smooth out the pixelated rendering or modernise the HUD; the late-90s cartridge feel is the identity."
+    ]
+  }
+}
